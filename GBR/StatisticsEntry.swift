@@ -1,3 +1,4 @@
+
 import WidgetKit
 import SwiftUI
 
@@ -5,31 +6,45 @@ struct StatisticsEntry: TimelineEntry {
     let date: Date
     let totalStations: Int
     let visitedStations: Int
-    let favoriteStations: Int
+    let notVisitedStations: Int
+    let percentageVisited: Double
 }
 
 struct StatisticsProvider: TimelineProvider {
     func placeholder(in context: Context) -> StatisticsEntry {
-        StatisticsEntry(date: Date(), totalStations: 0, visitedStations: 0, favoriteStations: 0)
+        StatisticsEntry(
+            date: Date(),
+            totalStations: 0,
+            visitedStations: 0,
+            notVisitedStations: 0,
+            percentageVisited: 0.0
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (StatisticsEntry) -> Void) {
-        let entry = StatisticsEntry(date: Date(), totalStations: 100, visitedStations: 50, favoriteStations: 20)
+        let entry = StatisticsEntry(
+            date: Date(),
+            totalStations: 100,
+            visitedStations: 50,
+            notVisitedStations: 50,
+            percentageVisited: 50.0
+        )
         completion(entry)
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<StatisticsEntry>) -> Void) {
-        // Load data from shared storage
-        let sharedDefaults = UserDefaults(suiteName: "group.com.yourapp.statistics")
+        let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics")
         let totalStations = sharedDefaults?.integer(forKey: "totalStations") ?? 0
         let visitedStations = sharedDefaults?.integer(forKey: "visitedStations") ?? 0
-        let favoriteStations = sharedDefaults?.integer(forKey: "favoriteStations") ?? 0
+        let notVisitedStations = sharedDefaults?.integer(forKey: "notVisitedStations") ?? 0
+        let percentageVisited = sharedDefaults?.double(forKey: "percentageVisited") ?? 0.0
 
         let entry = StatisticsEntry(
             date: Date(),
             totalStations: totalStations,
             visitedStations: visitedStations,
-            favoriteStations: favoriteStations
+            notVisitedStations: notVisitedStations,
+            percentageVisited: percentageVisited
         )
 
         let timeline = Timeline(entries: [entry], policy: .atEnd)
@@ -38,30 +53,22 @@ struct StatisticsProvider: TimelineProvider {
 }
 
 struct StatisticsWidgetEntryView: View {
-    var entry: StatisticsProvider.Entry
+    var entry: StatisticsEntry
 
     var body: some View {
         VStack(alignment: .leading) {
             Text("Station Statistics")
                 .font(.headline)
-                .padding(.bottom, 8)
 
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Total: \(entry.totalStations)")
-                    Text("Visited: \(entry.visitedStations)")
-                    Text("Favorites: \(entry.favoriteStations)")
-                }
-                Spacer()
-            }
-            .font(.subheadline)
-            .padding()
+            Text("Total Stations: \(entry.totalStations)")
+            Text("Visited Stations: \(entry.visitedStations)")
+            Text("Not Visited: \(entry.notVisitedStations)")
+            Text(String(format: "Visited %%: %.2f", entry.percentageVisited))
         }
         .padding()
     }
 }
 
-@main
 struct StatisticsWidget: Widget {
     let kind: String = "StatisticsWidget"
 
@@ -70,7 +77,7 @@ struct StatisticsWidget: Widget {
             StatisticsWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Station Statistics")
-        .description("Track your station visit and favorite statistics.")
+        .description("Track your station statistics.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

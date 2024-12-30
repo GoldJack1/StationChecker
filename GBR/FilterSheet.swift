@@ -9,6 +9,7 @@ struct FilterSheet: View {
     @Binding var selectedCounty: String?
     @Binding var selectedTOC: String?
     @Binding var showOnlyVisited: Bool
+    @Binding var showOnlyNotVisited: Bool
     @Binding var showOnlyFavorites: Bool
 
     var onApply: () -> Void
@@ -47,6 +48,7 @@ struct FilterSheet: View {
 
                 Section {
                     Toggle("Show Only Visited", isOn: $showOnlyVisited)
+                    Toggle("Show Only Not Visited", isOn: $showOnlyNotVisited)
                     Toggle("Show Only Favorites", isOn: $showOnlyFavorites)
                 }
             }

@@ -11,7 +11,7 @@ import SwiftUI
 struct GBRApp: App {
     var body: some Scene {
         WindowGroup {
-            landingpage()
+            landingPage()
         }
     }
 }

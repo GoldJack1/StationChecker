@@ -1,5 +1,8 @@
+import SwiftUI
+
 struct TimePickerPopup: View {
     @Binding var selectedTime: Date
+    @Environment(\.dismiss) private var dismiss // Environment property to dismiss the view
 
     var body: some View {
         NavigationView {
@@ -9,7 +12,7 @@ struct TimePickerPopup: View {
                     .padding()
 
                 Button("Done") {
-                    dismiss()
+                    dismiss() // Dismiss the sheet when Done is tapped
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -22,14 +25,10 @@ struct TimePickerPopup: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
-                        dismiss()
+                        dismiss() // Dismiss the sheet when Cancel is tapped
                     }
                 }
             }
         }
-    }
-
-    private func dismiss() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }

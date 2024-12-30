@@ -1,12 +1,11 @@
 import SwiftUI
 
 struct AddStationForm: View {
+    // Form state properties
     @State private var stationName: String = ""
     @State private var country: String = ""
     @State private var county: String = ""
     @State private var toc: String = ""
-    @State private var visited: Bool = false
-    @State private var visitDate: Date? = nil
     @State private var isFavorite: Bool = false
     @State private var latitude: String = ""
     @State private var longitude: String = ""
@@ -14,36 +13,28 @@ struct AddStationForm: View {
     @State private var newUsageYear: String = ""
     @State private var newUsageValue: String = ""
 
-    var onSave: (StationRecord) -> Void
+    // Closure to handle adding a new station
+    var onAddStation: (StationRecord) -> Void
+
+    // Environment variable to manage the presentation
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("General Information")) {
+                Section(header: Text("Station Details")) {
                     TextField("Station Name", text: $stationName)
                     TextField("Country", text: $country)
                     TextField("County", text: $county)
                     TextField("Operator (TOC)", text: $toc)
+                    Toggle("Mark as Favorite", isOn: $isFavorite)
                 }
 
-                Section(header: Text("Visited Information")) {
-                    Toggle("Visited", isOn: $visited)
-                    if visited {
-                        DatePicker("Visit Date", selection: Binding($visitDate, Date()))
-                            .datePickerStyle(GraphicalDatePickerStyle())
-                    }
-                }
-
-                Section(header: Text("Location")) {
+                Section(header: Text("Location Details")) {
                     TextField("Latitude", text: $latitude)
                         .keyboardType(.decimalPad)
                     TextField("Longitude", text: $longitude)
                         .keyboardType(.decimalPad)
-                }
-
-                Section(header: Text("Preferences")) {
-                    Toggle("Favorite", isOn: $isFavorite)
                 }
 
                 Section(header: Text("Usage Data")) {
@@ -57,7 +48,7 @@ struct AddStationForm: View {
                     HStack {
                         TextField("Year", text: $newUsageYear)
                             .keyboardType(.numberPad)
-                        TextField("Usage Value", text: $newUsageValue)
+                        TextField("Value", text: $newUsageValue)
                             .keyboardType(.default)
                         Button(action: addUsageData) {
                             Image(systemName: "plus.circle.fill")
@@ -67,22 +58,24 @@ struct AddStationForm: View {
                     }
                 }
             }
-            .navigationTitle("Add New Station")
+            .navigationTitle("Add Station")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        addStation()
+                    }
+                    .disabled(stationName.isEmpty || country.isEmpty || county.isEmpty || toc.isEmpty)
+                }
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        saveStation()
-                    }
-                    .disabled(stationName.isEmpty || country.isEmpty || county.isEmpty || toc.isEmpty)
-                }
             }
         }
     }
+
+    // MARK: - Helper Methods
 
     private func addUsageData() {
         usageData[newUsageYear] = newUsageValue
@@ -90,21 +83,21 @@ struct AddStationForm: View {
         newUsageValue = ""
     }
 
-    private func saveStation() {
+    private func addStation() {
         let newStation = StationRecord(
             id: UUID(),
             stationName: stationName,
             country: country,
             county: county,
             toc: toc,
-            visited: visited,
-            visitDate: visitDate,
+            visited: false,
+            visitDate: nil,
             isFavorite: isFavorite,
             latitude: Double(latitude) ?? 0.0,
             longitude: Double(longitude) ?? 0.0,
             usageData: usageData
         )
-        onSave(newStation)
+        onAddStation(newStation)
         dismiss()
     }
 }

@@ -5,113 +5,43 @@ struct HomePageView: View {
     @State private var selectedDate: Date = Date()
     @State private var selectedTime: Date = Date()
     @State private var showTrainResults: Bool = false
+    @State private var stationCode: String?
+
     @State private var showDatePicker: Bool = false
     @State private var showTimePicker: Bool = false
-    @State private var stationCode: String?
+    @State private var filteredSuggestions: [Station] = []
 
     var body: some View {
         NavigationStack {
             ZStack {
                 // Background color
-                LinearGradient(gradient: Gradient(colors: [Color.yellow.opacity(0.3), Color.white]), startPoint: .top, endPoint: .bottom)
+                Color(.systemBackground)
                     .edgesIgnoringSafeArea(.all)
 
                 VStack(spacing: 20) {
-                    Spacer()
+                    // Map Button
+                    mapButtonSection
 
-                    // Search Box
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Search for Train Times")
-                            .font(.headline)
-                            .foregroundColor(.black)
+                    // StnTr Button
+                    stnTrButton
 
-                        HStack {
-                            TextField("Enter CRS code or station name", text: $searchQuery)
-                                .padding()
-                                .background(Color.white)
-                                .cornerRadius(10)
-                                .shadow(radius: 3)
+                    // Search Section
+                    searchSection
 
-                            Button(action: {
-                                if let code = getStationCRSCode(for: searchQuery) {
-                                    stationCode = code
-                                    showTrainResults = true
-                                } else {
-                                    stationCode = nil
-                                    print("Invalid CRS code or station name")
-                                }
-                            }) {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .cornerRadius(10)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    // Date and Time Buttons
-                    VStack(alignment: .leading, spacing: 20) {
-                        Button(action: {
-                            showDatePicker = true // Open Date Picker
-                        }) {
-                            HStack {
-                                Text("Date: \(formattedDate(selectedDate))")
-                                    .foregroundColor(.black)
-                                Spacer()
-                                Image(systemName: "calendar")
-                                    .foregroundColor(.blue)
-                            }
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(10)
-                            .shadow(radius: 3)
-                        }
-
-                        Button(action: {
-                            showTimePicker = true // Open Time Picker
-                        }) {
-                            HStack {
-                                Text("Time: \(formattedTime(selectedTime))")
-                                    .foregroundColor(.black)
-                                Spacer()
-                                Image(systemName: "clock")
-                                    .foregroundColor(.blue)
-                            }
-                            .padding()
-                            .background(Color.white)
-                            .cornerRadius(10)
-                            .shadow(radius: 3)
-                        }
-                    }
-                    .padding(.horizontal)
+                    // Date and Time Selection
+                    dateTimeSelectionSection
 
                     Spacer()
-
-                    // Navigation Button
-                    VStack(spacing: 15) {
-                        NavigationLink(destination: Map()) {
-                            Text("View Map")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity, minHeight: 50)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                                .shadow(radius: 3)
-                        }
-                    }
-                    .padding(.horizontal)
                 }
+                .padding(.horizontal)
             }
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarLeading) {
                     Text("Home")
                         .font(.title3)
-                        .foregroundColor(.black)
+                        .foregroundColor(.primary)
                 }
             }
-            .toolbarBackground(Color.yellow, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .navigationBarBackButtonHidden(true)
             .navigationBarTitleDisplayMode(.inline)
@@ -131,28 +61,191 @@ struct HomePageView: View {
         }
     }
 
+    // Map Button Section
+    var mapButtonSection: some View {
+        VStack(spacing: 15) {
+            NavigationLink(destination: Map()) {
+                Text("View Map")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+                    .shadow(radius: 3)
+            }
+        }
+    }
+
+    // StnTr Button Section
+    var stnTrButton: some View {
+        VStack(spacing: 15) {
+            NavigationLink(destination: StationTrackerView()) {
+                Text("Station Tracker")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+                    .shadow(radius: 3)
+            }
+        }
+    }
+
+    // Search Section
+    var searchSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text("Search for Train Times")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            ZStack {
+                VStack(spacing: 0) {
+                    HStack {
+                        TextField("Enter CRS code or station name", text: $searchQuery)
+                            .padding(10)
+                            .background(Color(UIColor.secondarySystemBackground))
+                            .cornerRadius(8)
+                            .shadow(radius: 2)
+                            .autocorrectionDisabled(true)
+                            .onChange(of: searchQuery, initial: false) { _, newQuery in
+                                updateFilteredSuggestions(for: newQuery)
+                            }
+
+                        Button(action: {
+                            if let code = getStationCRSCode(for: searchQuery) {
+                                stationCode = code
+                                showTrainResults = true
+                            } else {
+                                stationCode = nil
+                                print("Invalid CRS code or station name")
+                            }
+                        }) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(Color.blue)
+                                .cornerRadius(8)
+                        }
+                    }
+                    .padding(.bottom, filteredSuggestions.isEmpty ? 0 : 5)
+
+                    // Suggestions Dropdown
+                    if !filteredSuggestions.isEmpty {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(filteredSuggestions, id: \.crsCode) { suggestion in
+                                    Button(action: {
+                                        searchQuery = suggestion.stationName
+                                        stationCode = suggestion.crsCode
+                                        filteredSuggestions = []
+                                    }) {
+                                        HStack {
+                                            Text(suggestion.stationName)
+                                                .foregroundColor(.primary)
+                                                .padding(.vertical, 10)
+                                            Spacer()
+                                            Text(suggestion.crsCode)
+                                                .foregroundColor(.secondary)
+                                                .font(.subheadline)
+                                        }
+                                        .padding(.horizontal)
+                                    }
+                                    Divider()
+                                }
+                            }
+                        }
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(8)
+                        .shadow(radius: 2)
+                        .frame(maxHeight: 150) // Limit suggestions height
+                    }
+                }
+            }
+        }
+    }
+
+    // Date and Time Selection Section
+    var dateTimeSelectionSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Button(action: {
+                showDatePicker = true
+            }) {
+                HStack {
+                    Text("Date: \(formattedDate(selectedDate))")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "calendar")
+                        .foregroundColor(.blue)
+                }
+                .padding()
+                .background(Color(UIColor.secondarySystemBackground))
+                .cornerRadius(10)
+                .shadow(radius: 3)
+            }
+
+            Button(action: {
+                showTimePicker = true
+            }) {
+                HStack {
+                    Text("Time: \(formattedTime(selectedTime))")
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "clock")
+                        .foregroundColor(.blue)
+                }
+                .padding()
+                .background(Color(UIColor.secondarySystemBackground))
+                .cornerRadius(10)
+                .shadow(radius: 3)
+            }
+        }
+    }
+
+    // Update Suggestions
+    func updateFilteredSuggestions(for query: String) {
+        if query.isEmpty {
+            filteredSuggestions = []
+        } else {
+            filteredSuggestions = stations.filter { $0.stationName.lowercased().contains(query.lowercased()) }
+        }
+    }
+
+    // Get CRS Code
     func getStationCRSCode(for input: String) -> String? {
         let uppercasedInput = input.uppercased()
 
-        // Check if input is already a valid CRS code
         if validateCRSCode(uppercasedInput) {
             return uppercasedInput
         }
 
-        // Check if input matches a station name in the `stations` array
         if let match = stations.first(where: { $0.stationName.lowercased() == input.lowercased() }) {
             return match.crsCode
         }
 
-        // If no match found, return nil
         return nil
     }
 
+    // Validate CRS Code
     func validateCRSCode(_ input: String) -> Bool {
         let crsRegex = "^[A-Z]{3}$"
         return NSPredicate(format: "SELF MATCHES %@", crsRegex).evaluate(with: input)
     }
 
+    // Format Date
+    func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter.string(from: date)
+    }
+
+    // Format Time
+    func formattedTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    // Combine Date and Time
     func combinedDateTime() -> Date {
         let calendar = Calendar.current
         let dateComponents = calendar.dateComponents([.year, .month, .day], from: selectedDate)
@@ -166,17 +259,5 @@ struct HomePageView: View {
         combinedComponents.minute = timeComponents.minute
 
         return calendar.date(from: combinedComponents) ?? Date()
-    }
-
-    func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
-    }
-
-    func formattedTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }

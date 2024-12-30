@@ -1,88 +1,101 @@
-//
-//  StatisticsWidget.swift
-//  StatisticsWidget
-//
-//  Created by Jack Wingate on 29/12/2024.
-//
-
 import WidgetKit
 import SwiftUI
 
-struct Provider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
-    }
-
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
-    }
-    
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        var entries: [SimpleEntry] = []
-
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
-        }
-
-        return Timeline(entries: entries, policy: .atEnd)
-    }
-
-//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
-}
-
-struct SimpleEntry: TimelineEntry {
+// Timeline Entry
+struct StatisticsEntry: TimelineEntry {
     let date: Date
-    let configuration: ConfigurationAppIntent
+    let totalStations: Int
+    let visitedStations: Int
+    let notVisitedStations: Int
+    let percentageVisited: Double
 }
 
-struct StatisticsWidgetEntryView : View {
-    var entry: Provider.Entry
+// Provider
+struct StatisticsProvider: TimelineProvider {
+    func placeholder(in context: Context) -> StatisticsEntry {
+        StatisticsEntry(
+            date: Date(),
+            totalStations: 0,
+            visitedStations: 0,
+            notVisitedStations: 0,
+            percentageVisited: 0.0
+        )
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (StatisticsEntry) -> Void) {
+        let entry = fetchStatistics()
+        completion(entry)
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<StatisticsEntry>) -> Void) {
+        let entry = fetchStatistics()
+        let timeline = Timeline(entries: [entry], policy: .atEnd)
+        completion(timeline)
+    }
+
+    private func fetchStatistics() -> StatisticsEntry {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics")
+        let totalStations = sharedDefaults?.integer(forKey: "totalStations") ?? 0
+        let visitedStations = sharedDefaults?.integer(forKey: "visitedStations") ?? 0
+        let notVisitedStations = sharedDefaults?.integer(forKey: "notVisitedStations") ?? 0
+        let percentageVisited = sharedDefaults?.double(forKey: "percentageVisited") ?? 0.0
+
+        return StatisticsEntry(
+            date: Date(),
+            totalStations: totalStations,
+            visitedStations: visitedStations,
+            notVisitedStations: notVisitedStations,
+            percentageVisited: percentageVisited
+        )
+    }
+}
+
+// Entry View
+struct StatisticsWidgetEntryView: View {
+    var entry: StatisticsEntry
 
     var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Station Statistics")
+                .font(.headline)
+                .fontWeight(.bold)
 
-            Text("Favorite Emoji:")
-            Text(entry.configuration.favoriteEmoji)
+            Text("Total Stations: \(entry.totalStations)")
+            Text("Visited Stations: \(entry.visitedStations)")
+            Text("Not Visited: \(entry.notVisitedStations)")
+            Text(String(format: "Visited %%: %.2f", entry.percentageVisited))
         }
+        .padding()
+        .containerBackground(Material.regular, for: .widget) // Widget background
     }
 }
 
+// Main Widget
 struct StatisticsWidget: Widget {
     let kind: String = "StatisticsWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+        StaticConfiguration(kind: kind, provider: StatisticsProvider()) { entry in
             StatisticsWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
         }
+        .configurationDisplayName("Station Statistics")
+        .description("Track your station statistics.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
-extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
+// Preview
+struct StatisticsWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        StatisticsWidgetEntryView(
+            entry: StatisticsEntry(
+                date: Date(),
+                totalStations: 100,
+                visitedStations: 50,
+                notVisitedStations: 50,
+                percentageVisited: 50.0
+            )
+        )
+        .previewContext(WidgetPreviewContext(family: .systemSmall))
     }
-    
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
-        return intent
-    }
-}
-
-#Preview(as: .systemSmall) {
-    StatisticsWidget()
-} timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
 }

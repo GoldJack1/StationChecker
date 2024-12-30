@@ -3,12 +3,13 @@ import SwiftUI
 struct StationDetailView: View {
     @State var station: StationRecord
     var onUpdate: (StationRecord) -> Void
-
+    
     @State private var isEditing: Bool = false
-
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                
                 // Section: General Information
                 SectionView(title: "General Information") {
                     VStack(alignment: .leading, spacing: 12) {
@@ -18,11 +19,10 @@ struct StationDetailView: View {
                         EditableField(label: "Operator (TOC)", text: $station.toc, isEditing: isEditing)
                     }
                 }
-
+                
                 // Section: Visit Information
                 SectionView(title: "Visit Information") {
                     VStack(alignment: .leading, spacing: 12) {
-                        // Toggle Button for Visited Status
                         HStack {
                             Label("Visited", systemImage: "checkmark.circle.fill")
                                 .foregroundColor(station.visited ? .green : .red)
@@ -47,157 +47,98 @@ struct StationDetailView: View {
                         .padding()
                         .background(Color(.systemGray6))
                         .cornerRadius(10)
-
-                        // Display Date Visited (if applicable)
-                        if station.visited {
-                            HStack {
-                                Label("Date Visited", systemImage: "calendar")
-                                Spacer()
-                                if isEditing {
-                                    DatePicker(
-                                        "",
-                                        selection: Binding($station.visitDate, replacingNilWith: Date()),
-                                        displayedComponents: .date
-                                    )
-                                    .labelsHidden()
-                                } else {
-                                    Text(station.visitDate ?? Date(), formatter: dateFormatter)
-                                        .foregroundColor(.primary)
+                        
+                        if let visitDate = station.visitDate {
+                            if isEditing {
+                                // Editable visit date
+                                DatePicker("Visit Date", selection: Binding($station.visitDate)!, displayedComponents: .date)
+                                    .datePickerStyle(CompactDatePickerStyle())
+                            } else {
+                                // Display visit date in view mode
+                                HStack {
+                                    Text("Visit Date:")
+                                        .fontWeight(.bold)
+                                    Spacer()
+                                    Text(visitDate, style: .date)
+                                        .foregroundColor(.gray)
                                 }
                             }
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
                         }
                     }
                 }
-
+                
                 // Section: Usage Data
-                SectionView(title: "Usage Data (2023 → 1997)") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(station.usageData.keys.sorted(by: >), id: \.self) { key in
+                SectionView(title: "Usage Data (1997–2024)") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Ensure all years from 1997 to 2024 are included
+                        let allYears = (1997...2024).map { String($0) }
+                        ForEach(allYears.sorted(by: >), id: \.self) { year in
                             HStack {
-                                Text("\(key):")
-                                    .fontWeight(.semibold)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(year)
+                                    .fontWeight(.bold)
                                 Spacer()
-                                Text(station.usageData[key] ?? "N/A")
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                                Text(station.usageData[year] ?? "N/A") // Show "N/A" if data is missing
+                                    .foregroundColor(.gray)
                             }
-                            .padding(8)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
                         }
                     }
-                }
-
-                // Favorite Toggle
-                SectionView(title: "Settings") {
-                    Toggle(isOn: $station.isFavorite) {
-                        Label("Mark as Favorite", systemImage: "star.fill")
-                            .foregroundColor(.yellow)
-                    }
-                    .toggleStyle(SwitchToggleStyle(tint: .yellow))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 24)
+            .padding()
         }
-        .background(Color(.systemGroupedBackground).edgesIgnoringSafeArea(.all))
-        .navigationTitle(isEditing ? "Edit Station" : station.stationName)
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    if isEditing {
-                        onUpdate(station) // Save changes
-                    }
                     isEditing.toggle()
                 }) {
-                    Image(systemName: isEditing ? "checkmark" : "pencil")
-                        .font(.title2)
-                        .foregroundColor(isEditing ? .green : .blue)
+                    Text(isEditing ? "Done" : "Edit")
                 }
             }
         }
     }
-
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter
-    }
 }
 
-// MARK: - EditableField Component
+// EditableField and SectionView are assumed to be reusable components.
 struct EditableField: View {
     let label: String
     @Binding var text: String
     var isEditing: Bool
-
+    
     var body: some View {
         HStack {
-            HStack {
-                Image(systemName: iconForLabel(label))
-                Text(label)
-            }
-            .fontWeight(.semibold)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
+            Text(label)
+                .fontWeight(.bold)
+            Spacer()
             if isEditing {
-                TextField(label, text: $text)
+                TextField("Enter \(label)", text: $text)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(maxWidth: .infinity)
             } else {
                 Text(text)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .foregroundColor(.primary)
+                    .foregroundColor(.gray)
             }
-        }
-        .padding(8)
-        .background(isEditing ? Color(.systemGray6) : Color.clear)
-        .cornerRadius(10)
-    }
-
-    private func iconForLabel(_ label: String) -> String {
-        switch label {
-        case "Station Name": return "building.2.fill"
-        case "Country": return "globe.europe.africa.fill"
-        case "County": return "map.fill"
-        case "Operator (TOC)": return "train.side.front.car.fill"
-        default: return "info.circle.fill"
         }
     }
 }
 
-// MARK: - SectionView Component
 struct SectionView<Content: View>: View {
     let title: String
     let content: Content
-
+    
     init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
     }
-
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text(title)
                 .font(.headline)
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
             content
                 .padding()
                 .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
+                .cornerRadius(10)
         }
-    }
-}
-
-// MARK: - Extensions for Binding
-extension Binding {
-    init(_ source: Binding<Value?>, replacingNilWith defaultValue: Value) {
-        self.init(get: { source.wrappedValue ?? defaultValue },
-                  set: { source.wrappedValue = $0 })
+        .padding(.vertical)
     }
 }

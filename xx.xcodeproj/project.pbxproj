@@ -69,6 +69,7 @@
 			membershipExceptions = (
 				Assets.xcassets,
 				Info.plist,
+				StatisticsWidgetExtension.entitlements,
 			);
 			target = 740D97802D21E9E800AA1648 /* StatisticsWidgetExtension */;
 		};
@@ -82,6 +83,7 @@
 			);
 			explicitFileTypes = {
 				Info.plist = text.plist.info;
+				StatisticsWidgetExtension.entitlements = text.xml;
 			};
 			path = StatisticsWidget;
 			sourceTree = "<group>";

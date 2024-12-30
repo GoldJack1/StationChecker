@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 import UniformTypeIdentifiers
 
 struct StationTrackerView: View {
@@ -182,6 +183,9 @@ struct StationTrackerView: View {
         if let index = stations.firstIndex(where: { $0.id == updatedStation.id }) {
             stations[index] = updatedStation
             filterStations()
+            saveStations()
+            saveStatisticsToSharedContainer() // Save updated statistics
+            WidgetCenter.shared.reloadAllTimelines() // Trigger widget refresh
         }
     }
 
@@ -411,7 +415,7 @@ struct StationTrackerView: View {
     }
 
     private func saveStatisticsToSharedContainer() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics")
+        let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics") // Replace with your app group
         let totalStations = stations.count
         let visitedStations = stations.filter { $0.visited }.count
         let notVisitedStations = totalStations - visitedStations
@@ -421,7 +425,7 @@ struct StationTrackerView: View {
         sharedDefaults?.set(visitedStations, forKey: "visitedStations")
         sharedDefaults?.set(notVisitedStations, forKey: "notVisitedStations")
         sharedDefaults?.set(percentageVisited, forKey: "percentageVisited")
-        
+
         print("Data Saved to Shared Container - Total: \(totalStations), Visited: \(visitedStations), Not Visited: \(notVisitedStations), Percentage: \(percentageVisited)")
     }
     

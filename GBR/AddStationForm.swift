@@ -85,7 +85,6 @@ struct AddStationForm: View {
 
     private func addStation() {
         let newStation = StationRecord(
-            id: UUID(),
             stationName: stationName,
             country: country,
             county: county,

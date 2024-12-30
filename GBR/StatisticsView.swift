@@ -1,6 +1,5 @@
 import SwiftUI
 import Charts
-import WidgetKit
 
 struct StatisticsView: View {
     let stations: [StationRecord]
@@ -8,14 +7,6 @@ struct StatisticsView: View {
     // Filter State
     @State private var selectedCountry: String? = nil
     @State private var selectedCounty: String? = nil
-    @State private var showOnlyVisited: Bool = false
-    @State private var showOnlyFavorites: Bool = false
-
-    // Statistics Data
-    @State private var totalStations: Int = 0
-    @State private var visitedStations: Int = 0
-    @State private var notVisitedStations: Int = 0
-    @State private var percentageVisited: Double = 0.0
 
     // Filtered Stations
     private var filteredStations: [StationRecord] {
@@ -26,14 +17,33 @@ struct StatisticsView: View {
             if let county = selectedCounty, station.county != county {
                 return false
             }
-            if showOnlyVisited && !station.visited {
-                return false
-            }
-            if showOnlyFavorites && !station.isFavorite {
-                return false
-            }
             return true
         }
+    }
+
+    // Calculated statistics
+    private var totalStations: Int {
+        filteredStations.count
+    }
+
+    private var visitedStations: Int {
+        filteredStations.filter { $0.visited }.count
+    }
+
+    private var notVisitedStations: Int {
+        totalStations - visitedStations
+    }
+
+    private var percentageVisited: Double {
+        totalStations > 0 ? (Double(visitedStations) / Double(totalStations)) * 100 : 0.0
+    }
+
+    private var availableCountries: [String] {
+        Array(Set(stations.map { $0.country })).sorted()
+    }
+
+    private var availableCounties: [String] {
+        Array(Set(stations.map { $0.county })).sorted()
     }
 
     var body: some View {
@@ -60,14 +70,6 @@ struct StatisticsView: View {
                 .padding(.horizontal)
                 .background(Color(.systemGray6))
                 .cornerRadius(8)
-
-                Toggle("Show Visited Only", isOn: $showOnlyVisited)
-                    .padding(.horizontal)
-                    .toggleStyle(SwitchToggleStyle())
-
-                Toggle("Show Favorites Only", isOn: $showOnlyFavorites)
-                    .padding(.horizontal)
-                    .toggleStyle(SwitchToggleStyle())
 
                 // Statistics Section
                 ScrollView {
@@ -107,47 +109,11 @@ struct StatisticsView: View {
             .padding(.vertical)
             .background(Color(.systemBackground).ignoresSafeArea())
             .navigationTitle("Statistics")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: saveStatisticsToSharedContainer) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                }
-            }
-            .onAppear {
-                calculateStatistics()
-            }
         }
-    }
-
-    // MARK: - Helper Methods
-
-    private var availableCountries: [String] {
-        Array(Set(stations.map { $0.country })).sorted()
-    }
-
-    private var availableCounties: [String] {
-        Array(Set(stations.map { $0.county })).sorted()
-    }
-
-    private func calculateStatistics() {
-        totalStations = filteredStations.count
-        visitedStations = filteredStations.filter { $0.visited }.count
-        notVisitedStations = totalStations - visitedStations
-        percentageVisited = totalStations > 0 ? (Double(visitedStations) / Double(totalStations)) * 100 : 0.0
-    }
-
-    private func saveStatisticsToSharedContainer() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics")
-        sharedDefaults?.set(totalStations, forKey: "totalStations")
-        sharedDefaults?.set(visitedStations, forKey: "visitedStations")
-        sharedDefaults?.set(notVisitedStations, forKey: "notVisitedStations")
-        sharedDefaults?.set(percentageVisited, forKey: "percentageVisited")
-
-        WidgetCenter.shared.reloadAllTimelines() // Refresh widget data
     }
 }
 
+// MARK: - Statistic Card View
 struct StatisticCard: View {
     let title: String
     let value: String
@@ -163,13 +129,14 @@ struct StatisticCard: View {
                 .foregroundColor(.primary)
         }
         .frame(maxWidth: .infinity, minHeight: 80)
-        .padding()
+        .padding(10)
         .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .cornerRadius(8)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 }
 
+// MARK: - Progress Statistic Card View
 struct ProgressStatisticCard: View {
     let title: String
     let value: String
@@ -185,25 +152,27 @@ struct ProgressStatisticCard: View {
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
 
+            // Adaptive Progress Bar
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.red.opacity(0.3)) // Background
+                    .fill(Color.red.opacity(0.3)) // Background (not visited portion)
                     .frame(height: 15)
 
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.green) // Progress
+                    .fill(Color.green) // Visited portion
                     .frame(width: progressBarWidth(progress: progress), height: 15)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, minHeight: 100)
-        .padding()
+        .padding(10)
         .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .cornerRadius(8)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 
     private func progressBarWidth(progress: Double) -> CGFloat {
-        let totalWidth = UIScreen.main.bounds.width - 40 // Padding for screen edges
+        let totalWidth: CGFloat = UIScreen.main.bounds.width - 40 // Adjust for screen padding
         return totalWidth * CGFloat(progress)
     }
 }

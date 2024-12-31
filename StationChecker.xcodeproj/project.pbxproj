@@ -82,7 +82,7 @@
 				740D979A2D21E9E900AA1648 /* Exceptions for "StatisticsWidget" folder in "StatisticsWidgetExtension" target */,
 			);
 			explicitFileTypes = {
-				Info.plist = text.plist.info;
+				Info.plist = sourcecode.swift;
 				StatisticsWidgetExtension.entitlements = text.xml;
 			};
 			path = StatisticsWidget;
@@ -423,9 +423,14 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jw.GBR.StatisticsWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = jw.StationChecker.StatisticsWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = NO;
 				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -452,9 +457,14 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jw.GBR.StatisticsWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = jw.StationChecker.StatisticsWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = NO;
 				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -588,11 +598,11 @@
 				CODE_SIGN_ENTITLEMENTS = StationChecker/StationChecker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"GBR/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"StationChecker/Preview Content\"";
 				DEVELOPMENT_TEAM = 69296J7389;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Station Checker";
+				INFOPLIST_KEY_CFBundleDisplayName = STNChecker;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -629,11 +639,11 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"GBR/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"StationChecker/Preview Content\"";
 				DEVELOPMENT_TEAM = 69296J7389;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Station Checker";
+				INFOPLIST_KEY_CFBundleDisplayName = STNChecker;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

@@ -60,31 +60,40 @@ class StationDataManager {
         var loadedStations: [StationRecord] = []
 
         do {
+            // Read the CSV content
             let csvContent = try String(contentsOf: fileURL, encoding: .utf8)
-            let rows = csvContent.components(separatedBy: "\n").dropFirst() // Skip header row
-            let csvDelimiter = ","
+
+            // Split rows and skip the header
+            let rows = csvContent.components(separatedBy: "\n").dropFirst() // Skip the header row
 
             for row in rows {
-                let columns = parseCSVRow(row: row, delimiter: csvDelimiter)
+                let columns = parseCSVRow(row: row, delimiter: ",")
+                guard columns.count >= 8 else { continue } // Ensure at least basic fields and 2024 column exist
 
-                guard columns.count >= 9 else { continue } // Ensure we have enough columns
+                // Map columns to StationRecord properties
+                let stationName = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                let country = columns[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                let county = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
+                let toc = columns[3].trimmingCharacters(in: .whitespacesAndNewlines)
+                let visited = columns[4].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+                let latitude = Double(columns[5].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0.0
+                let longitude = Double(columns[6].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0.0
 
-                let visited = columns[4].lowercased() == "yes"
-                let visitDate = columns[5].isEmpty ? nil : dateFormatter.date(from: columns[5])
-                let latitude = Double(columns[7]) ?? 0.0
-                let longitude = Double(columns[8]) ?? 0.0
+                // Extract usage data starting from the 2024 column (7th index)
+                let usageData = parseUsageData(columns: Array(columns[7...]), startYear: 2024)
 
+                // Create the StationRecord object
                 let station = StationRecord(
-                    stationName: columns[0].replacingOccurrences(of: "\"", with: ""),
-                    country: columns[1].replacingOccurrences(of: "\"", with: ""),
-                    county: columns[2].replacingOccurrences(of: "\"", with: ""),
-                    toc: columns[3].replacingOccurrences(of: "\"", with: ""),
+                    stationName: stationName,
+                    country: country,
+                    county: county,
+                    toc: toc,
                     visited: visited,
-                    visitDate: visitDate,
-                    isFavorite: columns[6].lowercased() == "yes",
+                    visitDate: nil, // Can be updated in the app if needed
+                    isFavorite: false, // Default value
                     latitude: latitude,
                     longitude: longitude,
-                    usageData: parseUsageData(columns: Array(columns[9...]))
+                    usageData: usageData
                 )
 
                 loadedStations.append(station)
@@ -112,18 +121,16 @@ class StationDataManager {
             }
         }
 
-        fields.append(currentField)
+        fields.append(currentField) // Add the last field
         return fields
     }
 
-    private func parseUsageData(columns: [String]) -> [String: String] {
+    private func parseUsageData(columns: [String], startYear: Int) -> [String: String] {
         var usageData: [String: String] = [:]
-        let startYear = 1997 // Example: first year for usage data
         for (index, value) in columns.enumerated() {
-            let year = String(startYear + index)
-            if !value.isEmpty {
-                usageData[year] = value
-            }
+            let year = String(startYear - index) // Dynamically calculate the year
+            let cleanValue = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            usageData[year] = cleanValue == "n/a" ? "N/A" : cleanValue
         }
         return usageData
     }

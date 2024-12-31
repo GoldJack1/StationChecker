@@ -5,13 +5,13 @@ struct StationRecord: Identifiable, Codable {
     var stationName: String
     var country: String
     var county: String
-    var toc: String
+    var toc: String // Train Operating Company
     var visited: Bool
-    var visitDate: Date? // Optional Date
+    var visitDate: Date? // Optional date of visit
     var isFavorite: Bool
     var latitude: Double
     var longitude: Double
-    var usageData: [String: String] // Example: ["2023": "1000", "2022": "950"]
+    var usageData: [String: String] // Key-value pairs for usage statistics
 
     init(
         id: UUID = UUID(),
@@ -19,12 +19,12 @@ struct StationRecord: Identifiable, Codable {
         country: String,
         county: String,
         toc: String,
-        visited: Bool,
-        visitDate: Date?,
-        isFavorite: Bool,
+        visited: Bool = false,
+        visitDate: Date? = nil,
+        isFavorite: Bool = false,
         latitude: Double,
         longitude: Double,
-        usageData: [String: String]
+        usageData: [String: String] = [:]
     ) {
         self.id = id
         self.stationName = stationName

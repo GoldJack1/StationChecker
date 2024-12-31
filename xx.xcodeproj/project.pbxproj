@@ -11,7 +11,7 @@
 		740D97852D21E9E800AA1648 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 740D97842D21E9E800AA1648 /* SwiftUI.framework */; };
 		740D97962D21E9E900AA1648 /* StatisticsWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 740D97812D21E9E800AA1648 /* StatisticsWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7440E4852D2094800040E6A9 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7440E4842D2094750040E6A9 /* MapKit.framework */; };
-		74E3D5742D2043DB00A843F3 /* SwiftCSV in Frameworks */ = {isa = PBXBuildFile; productRef = 74E3D5732D2043DB00A843F3 /* SwiftCSV */; };
+		7452B3472D24139D008D0D74 /* SwiftCSV in Frameworks */ = {isa = PBXBuildFile; productRef = 7452B3462D24139D008D0D74 /* SwiftCSV */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,7 +120,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7440E4852D2094800040E6A9 /* MapKit.framework in Frameworks */,
-				74E3D5742D2043DB00A843F3 /* SwiftCSV in Frameworks */,
+				7452B3472D24139D008D0D74 /* SwiftCSV in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,7 +219,7 @@
 			);
 			name = GBR;
 			packageProductDependencies = (
-				74E3D5732D2043DB00A843F3 /* SwiftCSV */,
+				7452B3462D24139D008D0D74 /* SwiftCSV */,
 			);
 			productName = GBR;
 			productReference = 74B06D5A2D1AD96C007C55D6 /* GBR.app */;
@@ -307,7 +307,7 @@
 			mainGroup = 74B06D512D1AD96B007C55D6;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				74E3D5722D2043DB00A843F3 /* XCRemoteSwiftPackageReference "SwiftCSV" */,
+				7452B3452D24139D008D0D74 /* XCRemoteSwiftPackageReference "SwiftCSV" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 74B06D5B2D1AD96C007C55D6 /* Products */;
@@ -763,7 +763,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		74E3D5722D2043DB00A843F3 /* XCRemoteSwiftPackageReference "SwiftCSV" */ = {
+		7452B3452D24139D008D0D74 /* XCRemoteSwiftPackageReference "SwiftCSV" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/swiftcsv/SwiftCSV";
 			requirement = {
@@ -774,9 +774,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		74E3D5732D2043DB00A843F3 /* SwiftCSV */ = {
+		7452B3462D24139D008D0D74 /* SwiftCSV */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 74E3D5722D2043DB00A843F3 /* XCRemoteSwiftPackageReference "SwiftCSV" */;
+			package = 7452B3452D24139D008D0D74 /* XCRemoteSwiftPackageReference "SwiftCSV" */;
 			productName = SwiftCSV;
 		};
 /* End XCSwiftPackageProductDependency section */

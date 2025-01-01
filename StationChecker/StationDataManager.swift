@@ -33,7 +33,11 @@ class StationDataManager {
         case .ireland:
             csvText = generateIrelandCSV(stations: stations)
         case .metrolink:
-            csvText = generateMetrolinkCSV(stations: stations)
+            if let metrolinkStations = stations as? [MetrolinkStationRecord] {
+                csvText = generateMetrolinkCSV(stations: metrolinkStations)
+            } else {
+                csvText = "Invalid Metrolink data."
+            }
         }
 
         do {
@@ -46,11 +50,12 @@ class StationDataManager {
         }
     }
 
-    private func generateNationalRailCSV(stations: [StationRecord]) -> String {
+    func generateNationalRailCSV(stations: [StationRecord]) -> String {
         var csvText = """
         "Station Name","Country","County","Operator","Visited","Visit Date","Favorite","Latitude","Longitude"
         """
 
+        // Include dynamic usage data headers
         let allUsageYears = Set(stations.flatMap { $0.usageData.keys }).sorted(by: >)
         csvText += "," + allUsageYears.map { "\"\($0)\"" }.joined(separator: ",") + "\n"
 
@@ -81,17 +86,36 @@ class StationDataManager {
         return csvText
     }
 
-    // Placeholder functions for other data types (add actual logic if needed)
-    private func generateNorthernIrelandCSV(stations: [StationRecord]) -> String {
+    func generateMetrolinkCSV(stations: [MetrolinkStationRecord]) -> String {
+        var csvText = """
+        "Station Name","Latitude","Longitude","Visited","Favorite","Visit Date"
+        """
+
+        for station in stations {
+            let visited = station.visited ? "Yes" : "No"
+            let favorite = station.isFavorite ? "Yes" : "No"
+            let visitDate = station.visitDate.map { dateFormatter.string(from: $0) } ?? ""
+
+            let row = [
+                station.stationName,
+                "\(station.latitude)",
+                "\(station.longitude)",
+                visited,
+                favorite,
+                visitDate
+            ].map { "\"\($0)\"" }.joined(separator: ",")
+
+            csvText += "\n\(row)"
+        }
+        return csvText
+    }
+
+    func generateNorthernIrelandCSV(stations: [StationRecord]) -> String {
         return "Northern Ireland CSV generation not implemented yet."
     }
 
-    private func generateIrelandCSV(stations: [StationRecord]) -> String {
+    func generateIrelandCSV(stations: [StationRecord]) -> String {
         return "Ireland CSV generation not implemented yet."
-    }
-
-    private func generateMetrolinkCSV(stations: [StationRecord]) -> String {
-        return "Manchester Metrolink CSV generation not implemented yet."
     }
 
     // MARK: - CSV Parsing
@@ -104,10 +128,10 @@ class StationDataManager {
         case .ireland:
             return parseIrelandCSV(from: fileURL)
         case .metrolink:
-            return parseMetrolinkCSV(from: fileURL)
+            return parseMetrolinkCSV(from: fileURL).map { $0.toStationRecord() }
         }
     }
-    // Example: Parse National Rail CSV
+
     func parseNationalRailCSV(from fileURL: URL) -> [StationRecord] {
         var loadedStations: [StationRecord] = []
 
@@ -124,14 +148,14 @@ class StationDataManager {
                 let county = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
                 let toc = columns[3].trimmingCharacters(in: .whitespacesAndNewlines)
                 let visited = columns[4].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
-                let visitDate: Date? = nil // Update if your CSV includes visit dates
-                let isFavorite = false // Default for imported data
-                let latitude = Double(columns[5]) ?? 0.0
-                let longitude = Double(columns[6]) ?? 0.0
-                let usageData = parseUsageData(columns: Array(columns[7...]), startYear: 2024)
+                let visitDate = columns[5].isEmpty ? nil : dateFormatter.date(from: columns[5])
+                let isFavorite = columns[6].lowercased() == "yes"
+                let latitude = Double(columns[7]) ?? 0.0
+                let longitude = Double(columns[8]) ?? 0.0
+                let usageData = parseUsageData(columns: Array(columns[9...]), startYear: 2024)
 
-                // Initialize StationRecord with a UUID
                 let station = StationRecord(
+                    id: UUID(),
                     stationName: stationName,
                     country: country,
                     county: county,
@@ -152,23 +176,68 @@ class StationDataManager {
 
         return loadedStations
     }
-
-    // Placeholder for the other CSV parsers
+    
     func parseNorthernIrelandCSV(from fileURL: URL) -> [StationRecord] {
-        print("Parsing Northern Ireland CSV is not yet implemented.")
+        print("Parsing Northern Ireland CSV is not implemented yet.")
+        // Return an empty array to prevent disruptions
         return []
     }
-
+    
     func parseIrelandCSV(from fileURL: URL) -> [StationRecord] {
-        print("Parsing Ireland CSV is not yet implemented.")
+        print("Parsing Ireland CSV is not implemented yet.")
+        // Return an empty array to prevent disruptions
         return []
     }
 
-    func parseMetrolinkCSV(from fileURL: URL) -> [StationRecord] {
-        print("Parsing Metrolink CSV is not yet implemented.")
-        return []
+    func parseMetrolinkCSV(from fileURL: URL) -> [MetrolinkStationRecord] {
+        var loadedStations: [MetrolinkStationRecord] = []
+
+        do {
+            let csvContent = try String(contentsOf: fileURL, encoding: .utf8)
+            let rows = csvContent.components(separatedBy: "\n").dropFirst()
+
+            for row in rows {
+                let columns = parseCSVRow(row: row, delimiter: ",")
+                guard columns.count >= 3 else { continue }
+
+                let stationName = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let latitude = Double(columns[1].trimmingCharacters(in: .whitespacesAndNewlines)) else { continue }
+                guard let longitude = Double(columns[2].trimmingCharacters(in: .whitespacesAndNewlines)) else { continue }
+
+                let visited = columns.count > 3 && columns[3].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+                let favorite = columns.count > 4 && columns[4].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+                let visitDate = columns.count > 5 && !columns[5].isEmpty ? dateFormatter.date(from: columns[5]) : nil
+
+                let station = MetrolinkStationRecord(
+                    id: UUID(),
+                    stationName: stationName,
+                    latitude: latitude,
+                    longitude: longitude,
+                    visited: visited,
+                    isFavorite: favorite,
+                    visitDate: visitDate
+                )
+
+                loadedStations.append(station)
+            }
+        } catch {
+            print("Error parsing Metrolink CSV: \(error)")
+        }
+
+        return loadedStations
     }
 
+    private func parseUsageData(columns: [String], startYear: Int) -> [String: String] {
+        var usageData: [String: String] = [:]
+        for (index, value) in columns.enumerated() {
+            let year = String(startYear - index)
+            let cleanValue = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            usageData[year] = cleanValue == "n/a" ? "N/A" : cleanValue
+        }
+        return usageData
+    }
+
+    // MARK: - Helper Methods
     private func parseCSVRow(row: String, delimiter: String) -> [String] {
         var fields: [String] = []
         var currentField = ""
@@ -189,17 +258,18 @@ class StationDataManager {
         return fields
     }
 
-    private func parseUsageData(columns: [String], startYear: Int) -> [String: String] {
-        var usageData: [String: String] = [:]
-        for (index, value) in columns.enumerated() {
-            let year = String(startYear - index) // Dynamically calculate the year
-            let cleanValue = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            usageData[year] = cleanValue == "n/a" ? "N/A" : cleanValue
+    func loadStationsFromDisk() -> [StationRecord] {
+        let fileURL = getDocumentsDirectory().appendingPathComponent("stations.json")
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let loadedStations = try JSONDecoder().decode([StationRecord].self, from: data)
+            return loadedStations
+        } catch {
+            print("Error loading stations from disk: \(error)")
+            return []
         }
-        return usageData
     }
 
-    // MARK: - JSON Persistence
     func saveStationsToDisk(_ stations: [StationRecord]) {
         let fileURL = getDocumentsDirectory().appendingPathComponent("stations.json")
         do {
@@ -211,37 +281,33 @@ class StationDataManager {
         }
     }
 
-    func loadStationsFromDisk() -> [StationRecord] {
-        let fileURL = getDocumentsDirectory().appendingPathComponent("stations.json")
-        do {
-            let data = try Data(contentsOf: fileURL)
-            return try JSONDecoder().decode([StationRecord].self, from: data)
-        } catch {
-            print("Error loading stations from disk: \(error)")
-            return []
-        }
-    }
-
-    func clearStations() {
-            let fileURL = getDocumentsDirectory().appendingPathComponent("stations.json")
-            
-            // Remove the stations JSON file from the document directory
-            do {
-                try FileManager.default.removeItem(at: fileURL)
-                print("Stations file cleared.")
-            } catch {
-                print("Error clearing stations file: \(error)")
-            }
-
-            // If you're using UserDefaults or other persistence mechanisms, clear them as well
-            UserDefaults.standard.removeObject(forKey: "stationsKey")
-            print("UserDefaults cleared.")
-        }
-
     private func getDocumentsDirectory() -> URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
+    func saveMetrolinkStations(_ stations: [MetrolinkStationRecord]) {
+        let fileURL = getDocumentsDirectory().appendingPathComponent("metrolinkStations.json")
+        do {
+            let data = try JSONEncoder().encode(stations)
+            try data.write(to: fileURL, options: .atomic)
+            print("Metrolink stations successfully saved to: \(fileURL)")
+        } catch {
+            print("Error saving Metrolink stations to disk: \(error)")
+        }
+    }
+    
+    func loadMetrolinkStations() -> [MetrolinkStationRecord] {
+        let fileURL = getDocumentsDirectory().appendingPathComponent("metrolinkStations.json")
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let loadedStations = try JSONDecoder().decode([MetrolinkStationRecord].self, from: data)
+            return loadedStations
+        } catch {
+            print("Error loading Metrolink stations from disk: \(error)")
+            return []
+        }
+    }
+    
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"

@@ -10,6 +10,10 @@ struct DataOptionsSheet: View {
     @State private var showDataTypeSheet: Bool = false
     @State private var actionType: DataAction? = nil
 
+    // Navigation State
+    @State private var navigateToStationTracker = false
+    @State private var navigateToMetrolinkTracker = false
+
     var body: some View {
         NavigationView {
             Form {
@@ -31,16 +35,35 @@ struct DataOptionsSheet: View {
                     }
 
                     Button(action: {
-                        onClearData() // Trigger the onClearData closure
-                        dismissSheet() // Dismiss the DataOptionsSheet after clearing data
+                        onClearData()
+                        dismissSheet()
                     }) {
                         Label("Clear All Data", systemImage: "trash")
                             .foregroundColor(.red)
                     }
 
-                    Button(action: onAddStation) {
-                        Label("Add Station", systemImage: "plus.circle")
-                            .foregroundColor(.orange)
+                    Button("Add Station") {
+                        onAddStation()
+                    }
+                    .padding()
+
+                    // Navigation Buttons
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            navigateToStationTracker = true
+                        }
+                    }) {
+                        Label("Go to General Stations", systemImage: "list.bullet")
+                    }
+
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            navigateToMetrolinkTracker = true
+                        }
+                    }) {
+                        Label("Go to Metrolink Tracker", systemImage: "tram")
                     }
                 }
             }
@@ -59,16 +82,23 @@ struct DataOptionsSheet: View {
                     }
                 )
             }
+            .background(
+                NavigationLink("", destination: StationTrackerView(), isActive: $navigateToStationTracker)
+                    .hidden()
+            )
+            .background(
+                NavigationLink("", destination: MetrolinkTrackerView(), isActive: $navigateToMetrolinkTracker)
+                    .hidden()
+            )
         }
     }
 
-    // Dismiss the DataOptionsSheet
+    // MARK: - Helper Methods
     private func dismissSheet() {
         presentationMode.wrappedValue.dismiss()
     }
 
     private func dismissSheetsAndPerform(action: @escaping () -> Void) {
-        // Dismiss DataOptionsSheet and perform the action
         presentationMode.wrappedValue.dismiss()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             action()

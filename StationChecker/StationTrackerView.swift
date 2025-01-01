@@ -6,7 +6,7 @@ struct StationTrackerView: View {
     @State private var stations: [StationRecord] = [] {
         didSet {
             StationDataManager.shared.saveStationsToDisk(stations)
-            saveStatisticsToSharedContainer() // Ensure widget statistics are updated
+            saveStatisticsToSharedContainer()
         }
     }
     @State private var filteredStations: [StationRecord] = []
@@ -16,6 +16,7 @@ struct StationTrackerView: View {
     @State private var showFilterSheet: Bool = false
     @State private var showStatisticsView: Bool = false
     @State private var showDataOptionsSheet: Bool = false
+    @State private var selectedDataType: StationDataType? = nil
     @State private var errorMessage: String? = nil
 
     // Filter State
@@ -57,7 +58,7 @@ struct StationTrackerView: View {
                                 onNavigate: {
                                     // Navigate to StationDetailView
                                     let destination = StationDetailView(station: station, onUpdate: updateStation)
-                                    // Provide navigation logic here (e.g., using a NavigationLink or manual push)
+                                    print("Navigating to details of \(station.stationName)")
                                 }
                             )
                         }
@@ -104,10 +105,20 @@ struct StationTrackerView: View {
             }
             .sheet(isPresented: $showDataOptionsSheet) {
                 DataOptionsSheet(
-                    onImport: { dismissDataOptionsAndTriggerImport() },
-                    onExport: { dismissDataOptionsAndTriggerExport() },
-                    onClearData: { dismissDataOptionsAndClearData() },
-                    onAddStation: { showAddStationForm = true } // Show the Add Station form
+                    onImport: { stationDataType in // Rename to `stationDataType` for clarity
+                        selectedDataType = stationDataType // `stationDataType` is now `StationDataType`
+                        showFilePicker = true
+                    },
+                    onExport: { stationDataType in // Rename to `stationDataType` for clarity
+                        exportCSV(for: stationDataType) // Pass `StationDataType`
+                    },
+                    onClearData: {
+                        stations.removeAll()
+                        StationDataManager.shared.clearStations()
+                    },
+                    onAddStation: {
+                        showAddStationForm = true
+                    }
                 )
             }
             .fileImporter(
@@ -172,7 +183,7 @@ struct StationTrackerView: View {
 
     private func addStation(_ newStation: StationRecord) {
         stations.append(newStation)
-        filterStations() // Update the filtered list after adding
+        filterStations()
     }
 
     private func updateStation(_ updatedStation: StationRecord) {
@@ -190,21 +201,14 @@ struct StationTrackerView: View {
     private func handleFileImport(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
-            guard let fileURL = urls.first else {
-                print("No file selected.")
+            guard let fileURL = urls.first, let dataType = selectedDataType else {
+                errorMessage = "No file selected or data type not chosen."
                 return
             }
 
-            guard fileURL.startAccessingSecurityScopedResource() else {
-                print("Permission denied for file: \(fileURL)")
-                return
-            }
-
-            defer { fileURL.stopAccessingSecurityScopedResource() }
-
-            let importedStations = StationDataManager.shared.parseCSV(from: fileURL)
+            let importedStations = StationDataManager.shared.parseCSV(from: fileURL, for: dataType)
             if importedStations.isEmpty {
-                errorMessage = "Failed to parse the CSV file. Ensure it is formatted correctly."
+                errorMessage = "Failed to parse the \(dataType.name) CSV file." // This now works
             } else {
                 errorMessage = nil
                 stations.append(contentsOf: importedStations)
@@ -215,38 +219,15 @@ struct StationTrackerView: View {
         }
     }
 
-    private func dismissDataOptionsAndTriggerImport() {
-        showDataOptionsSheet = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            showFilePicker = true
-        }
-    }
-
-    private func dismissDataOptionsAndTriggerExport() {
-        showDataOptionsSheet = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            exportCSV()
-        }
-    }
-
-    private func dismissDataOptionsAndClearData() {
-        showDataOptionsSheet = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            stations.removeAll()
-            StationDataManager.shared.clearStations()
-            filterStations()
-        }
-    }
-
-    private func exportCSV() {
-        if let exportedFileURL = StationDataManager.shared.exportStationsToCSV(stations: stations) {
+    private func exportCSV(for dataType: StationDataType) {
+        if let exportedFileURL = StationDataManager.shared.exportStationsToCSV(stations: stations, for: dataType) {
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let rootViewController = scene.windows.first?.rootViewController {
                 let activityVC = UIActivityViewController(activityItems: [exportedFileURL], applicationActivities: nil)
                 rootViewController.present(activityVC, animated: true)
             }
         } else {
-            print("Failed to export CSV.")
+            errorMessage = "Failed to export \(dataType.name) CSV." // This now works
         }
     }
 
@@ -256,8 +237,7 @@ struct StationTrackerView: View {
     }
 
     private func saveStatisticsToSharedContainer() {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics")
-        guard let sharedDefaults = sharedDefaults else {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics") else {
             print("Shared defaults not found")
             return
         }
@@ -271,11 +251,7 @@ struct StationTrackerView: View {
         sharedDefaults.set(visitedStations, forKey: "visitedStations")
         sharedDefaults.set(notVisitedStations, forKey: "notVisitedStations")
         sharedDefaults.set(percentageVisited, forKey: "percentageVisited")
-        sharedDefaults.synchronize() // Save changes immediately
 
-        print("Statistics updated in shared container")
-
-        // Reload widget timeline to reflect changes
         WidgetCenter.shared.reloadAllTimelines()
     }
 }

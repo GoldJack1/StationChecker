@@ -7,16 +7,54 @@ class StationDataManager {
     private init() {}
 
     // MARK: - CSV Export
-    func exportStationsToCSV(stations: [StationRecord]) -> URL? {
-        let fileName = "ExportedStations.csv"
+    func exportStationsToCSV(stations: [StationRecord], for dataType: StationDataType) -> URL? {
+        let fileName: String
+        switch dataType {
+        case .nationalRail:
+            fileName = "NationalRailData.csv"
+        case .northernIreland:
+            fileName = "NorthernIrelandData.csv"
+        case .ireland:
+            fileName = "IrelandData.csv"
+        case .metrolink:
+            fileName = "MetrolinkData.csv"
+        default:
+            return nil // Fallback for any unexpected case
+        }
+
         let tempDirectory = FileManager.default.temporaryDirectory
         let fileURL = tempDirectory.appendingPathComponent(fileName)
 
+        var csvText: String
+
+        switch dataType {
+        case .nationalRail:
+            csvText = generateNationalRailCSV(stations: stations)
+        case .northernIreland:
+            csvText = generateNorthernIrelandCSV(stations: stations)
+        case .ireland:
+            csvText = generateIrelandCSV(stations: stations)
+        case .metrolink:
+            csvText = generateMetrolinkCSV(stations: stations)
+        default:
+            return nil // Fallback for any unexpected case
+        }
+
+        do {
+            try csvText.write(to: fileURL, atomically: true, encoding: .utf8)
+            print("CSV file successfully saved to: \(fileURL)")
+            return fileURL
+        } catch {
+            print("Failed to save CSV file: \(error)")
+            return nil
+        }
+    }
+
+    private func generateNationalRailCSV(stations: [StationRecord]) -> String {
         var csvText = """
         "Station Name","Country","County","Operator","Visited","Visit Date","Favorite","Latitude","Longitude"
         """
 
-        // Include usage data headers dynamically
         let allUsageYears = Set(stations.flatMap { $0.usageData.keys }).sorted(by: >)
         csvText += "," + allUsageYears.map { "\"\($0)\"" }.joined(separator: ",") + "\n"
 
@@ -44,53 +82,65 @@ class StationDataManager {
 
             csvText += row + "\n"
         }
+        return csvText
+    }
 
-        do {
-            try csvText.write(to: fileURL, atomically: true, encoding: .utf8)
-            print("CSV file successfully saved to: \(fileURL)")
-            return fileURL
-        } catch {
-            print("Failed to save CSV file: \(error)")
-            return nil
-        }
+    // Placeholder functions for other data types (add actual logic if needed)
+    private func generateNorthernIrelandCSV(stations: [StationRecord]) -> String {
+        return "Northern Ireland CSV generation not implemented yet."
+    }
+
+    private func generateIrelandCSV(stations: [StationRecord]) -> String {
+        return "Ireland CSV generation not implemented yet."
+    }
+
+    private func generateMetrolinkCSV(stations: [StationRecord]) -> String {
+        return "Manchester Metrolink CSV generation not implemented yet."
     }
 
     // MARK: - CSV Parsing
-    func parseCSV(from fileURL: URL) -> [StationRecord] {
+    func parseCSV(from fileURL: URL, for dataType: StationDataType) -> [StationRecord] {
+        switch dataType {
+        case .nationalRail:
+            return parseNationalRailCSV(from: fileURL)
+        case .northernIreland:
+            return parseNorthernIrelandCSV(from: fileURL)
+        case .ireland:
+            return parseIrelandCSV(from: fileURL)
+        case .metrolink:
+            return parseMetrolinkCSV(from: fileURL)
+        default:
+            return [] // Return an empty array for any unexpected case
+        }
+    }
+    // Example: Parse National Rail CSV
+    func parseNationalRailCSV(from fileURL: URL) -> [StationRecord] {
         var loadedStations: [StationRecord] = []
-
         do {
-            // Read the CSV content
             let csvContent = try String(contentsOf: fileURL, encoding: .utf8)
-
-            // Split rows and skip the header
             let rows = csvContent.components(separatedBy: "\n").dropFirst() // Skip the header row
-
+            
             for row in rows {
                 let columns = parseCSVRow(row: row, delimiter: ",")
-                guard columns.count >= 8 else { continue } // Ensure at least basic fields and 2024 column exist
+                guard columns.count >= 8 else { continue } // Ensure minimum fields
 
-                // Map columns to StationRecord properties
                 let stationName = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
                 let country = columns[1].trimmingCharacters(in: .whitespacesAndNewlines)
                 let county = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
                 let toc = columns[3].trimmingCharacters(in: .whitespacesAndNewlines)
                 let visited = columns[4].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
-                let latitude = Double(columns[5].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0.0
-                let longitude = Double(columns[6].trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0.0
-
-                // Extract usage data starting from the 2024 column (7th index)
+                let latitude = Double(columns[5]) ?? 0.0
+                let longitude = Double(columns[6]) ?? 0.0
                 let usageData = parseUsageData(columns: Array(columns[7...]), startYear: 2024)
 
-                // Create the StationRecord object
                 let station = StationRecord(
                     stationName: stationName,
                     country: country,
                     county: county,
                     toc: toc,
                     visited: visited,
-                    visitDate: nil, // Can be updated in the app if needed
-                    isFavorite: false, // Default value
+                    visitDate: nil,
+                    isFavorite: false,
                     latitude: latitude,
                     longitude: longitude,
                     usageData: usageData
@@ -99,10 +149,25 @@ class StationDataManager {
                 loadedStations.append(station)
             }
         } catch {
-            print("Error parsing CSV file: \(error)")
+            print("Error parsing National Rail CSV: \(error)")
         }
-
         return loadedStations
+    }
+
+    // Placeholder for the other CSV parsers
+    func parseNorthernIrelandCSV(from fileURL: URL) -> [StationRecord] {
+        print("Parsing Northern Ireland CSV is not yet implemented.")
+        return []
+    }
+
+    func parseIrelandCSV(from fileURL: URL) -> [StationRecord] {
+        print("Parsing Ireland CSV is not yet implemented.")
+        return []
+    }
+
+    func parseMetrolinkCSV(from fileURL: URL) -> [StationRecord] {
+        print("Parsing Metrolink CSV is not yet implemented.")
+        return []
     }
 
     private func parseCSVRow(row: String, delimiter: String) -> [String] {

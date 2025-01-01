@@ -18,8 +18,6 @@ class StationDataManager {
             fileName = "IrelandData.csv"
         case .metrolink:
             fileName = "MetrolinkData.csv"
-        default:
-            return nil // Fallback for any unexpected case
         }
 
         let tempDirectory = FileManager.default.temporaryDirectory
@@ -36,8 +34,6 @@ class StationDataManager {
             csvText = generateIrelandCSV(stations: stations)
         case .metrolink:
             csvText = generateMetrolinkCSV(stations: stations)
-        default:
-            return nil // Fallback for any unexpected case
         }
 
         do {
@@ -109,38 +105,40 @@ class StationDataManager {
             return parseIrelandCSV(from: fileURL)
         case .metrolink:
             return parseMetrolinkCSV(from: fileURL)
-        default:
-            return [] // Return an empty array for any unexpected case
         }
     }
     // Example: Parse National Rail CSV
     func parseNationalRailCSV(from fileURL: URL) -> [StationRecord] {
         var loadedStations: [StationRecord] = []
+
         do {
             let csvContent = try String(contentsOf: fileURL, encoding: .utf8)
-            let rows = csvContent.components(separatedBy: "\n").dropFirst() // Skip the header row
-            
+            let rows = csvContent.components(separatedBy: "\n").dropFirst() // Skip header row
+
             for row in rows {
                 let columns = parseCSVRow(row: row, delimiter: ",")
-                guard columns.count >= 8 else { continue } // Ensure minimum fields
+                guard columns.count >= 8 else { continue } // Ensure enough columns
 
                 let stationName = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
                 let country = columns[1].trimmingCharacters(in: .whitespacesAndNewlines)
                 let county = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
                 let toc = columns[3].trimmingCharacters(in: .whitespacesAndNewlines)
                 let visited = columns[4].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
+                let visitDate: Date? = nil // Update if your CSV includes visit dates
+                let isFavorite = false // Default for imported data
                 let latitude = Double(columns[5]) ?? 0.0
                 let longitude = Double(columns[6]) ?? 0.0
                 let usageData = parseUsageData(columns: Array(columns[7...]), startYear: 2024)
 
+                // Initialize StationRecord with a UUID
                 let station = StationRecord(
                     stationName: stationName,
                     country: country,
                     county: county,
                     toc: toc,
                     visited: visited,
-                    visitDate: nil,
-                    isFavorite: false,
+                    visitDate: visitDate,
+                    isFavorite: isFavorite,
                     latitude: latitude,
                     longitude: longitude,
                     usageData: usageData
@@ -151,6 +149,7 @@ class StationDataManager {
         } catch {
             print("Error parsing National Rail CSV: \(error)")
         }
+
         return loadedStations
     }
 
@@ -224,13 +223,20 @@ class StationDataManager {
     }
 
     func clearStations() {
-        let fileURL = getDocumentsDirectory().appendingPathComponent("stations.json")
-        do {
-            try FileManager.default.removeItem(at: fileURL)
-        } catch {
-            print("Error clearing stations: \(error)")
+            let fileURL = getDocumentsDirectory().appendingPathComponent("stations.json")
+            
+            // Remove the stations JSON file from the document directory
+            do {
+                try FileManager.default.removeItem(at: fileURL)
+                print("Stations file cleared.")
+            } catch {
+                print("Error clearing stations file: \(error)")
+            }
+
+            // If you're using UserDefaults or other persistence mechanisms, clear them as well
+            UserDefaults.standard.removeObject(forKey: "stationsKey")
+            print("UserDefaults cleared.")
         }
-    }
 
     private func getDocumentsDirectory() -> URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]

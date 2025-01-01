@@ -1,21 +1,14 @@
 import Foundation
 
-struct StationDataType: Identifiable, Equatable {
-    let id = UUID()
-    let name: String
+enum StationDataType: String, CaseIterable, Identifiable {
+    case nationalRail = "National Rail"
+    case northernIreland = "Northern Ireland Railways"
+    case ireland = "Ireland Rail"
+    case metrolink = "Manchester Metrolink"
 
-    // Add equatable conformance
-    static func == (lhs: StationDataType, rhs: StationDataType) -> Bool {
-        lhs.id == rhs.id
-    }
+    var id: String { rawValue }
 
     var displayName: String {
-        return name
+        rawValue
     }
-
-    // Predefined types of data
-    static let nationalRail = StationDataType(name: "National Rail")
-    static let northernIreland = StationDataType(name: "Northern Ireland Railways")
-    static let ireland = StationDataType(name: "Ireland Rail")
-    static let metrolink = StationDataType(name: "Manchester Metrolink")
 }

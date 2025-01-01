@@ -1,6 +1,6 @@
 import SwiftUI
-import WidgetKit
 import UniformTypeIdentifiers
+import WidgetKit
 
 struct StationTrackerView: View {
     @State private var stations: [StationRecord] = [] {
@@ -10,6 +10,7 @@ struct StationTrackerView: View {
         }
     }
     @State private var filteredStations: [StationRecord] = []
+    @State private var importedStations: [StationRecord] = []
     @State private var searchQuery: String = ""
     @State private var showFilePicker: Bool = false
     @State private var showAddStationForm: Bool = false
@@ -39,7 +40,7 @@ struct StationTrackerView: View {
                     .onChange(of: searchQuery) { _ in
                         filterStations()
                     }
-
+                
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -56,9 +57,7 @@ struct StationTrackerView: View {
                                 station: station,
                                 onUpdate: updateStation,
                                 onNavigate: {
-                                    // Navigate to StationDetailView
-                                    let destination = StationDetailView(station: station, onUpdate: updateStation)
-                                    print("Navigating to details of \(station.stationName)")
+                                    // Navigate logic
                                 }
                             )
                         }
@@ -105,16 +104,18 @@ struct StationTrackerView: View {
             }
             .sheet(isPresented: $showDataOptionsSheet) {
                 DataOptionsSheet(
-                    onImport: { stationDataType in // Rename to `stationDataType` for clarity
-                        selectedDataType = stationDataType // `stationDataType` is now `StationDataType`
+                    onImport: { dataType in
+                        selectedDataType = dataType
                         showFilePicker = true
                     },
-                    onExport: { stationDataType in // Rename to `stationDataType` for clarity
-                        exportCSV(for: stationDataType) // Pass `StationDataType`
+                    onExport: { dataType in
+                        exportCSV(for: dataType)
                     },
                     onClearData: {
-                        stations.removeAll()
-                        StationDataManager.shared.clearStations()
+                        // Clear the stations array and any persisted data
+                        stations.removeAll()  // Clear the stations array from the current view
+                        StationDataManager.shared.clearStations()  // Ensure persistent data is cleared from StationDataManager
+                        print("All data cleared.")
                     },
                     onAddStation: {
                         showAddStationForm = true
@@ -122,53 +123,81 @@ struct StationTrackerView: View {
                 )
             }
             .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [UTType.commaSeparatedText],
+                isPresented: $showFilePicker, // Ensure `showFilePicker` is defined as a `@State` property
+                allowedContentTypes: [.commaSeparatedText],
                 allowsMultipleSelection: false
             ) { result in
-                handleFileImport(result: result)
-            }
-            .onAppear {
-                loadStations()
-                filterStations()
+                handleFilePicker(result: result)
             }
         }
     }
-
+    
     // MARK: - Helper Methods
 
+    private func handleFilePicker(result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let fileURL = urls.first else {
+                print("No file selected.")
+                return
+            }
+
+            guard fileURL.startAccessingSecurityScopedResource() else {
+                print("Permission denied for file: \(fileURL)")
+                return
+            }
+
+            defer { fileURL.stopAccessingSecurityScopedResource() }
+
+            // Parse the CSV and get the imported stations
+            let importedStations = StationDataManager.shared.parseCSV(from: fileURL, for: .nationalRail)
+            if importedStations.isEmpty {
+                print("Failed to parse the National Rail CSV file.")
+            } else {
+                print("Successfully imported \(importedStations.count) stations.")
+                // Append the imported stations to the list
+                stations.append(contentsOf: importedStations)
+                // Call filterStations to update the filtered list
+                filterStations()
+                
+                // Debugging: Print the filtered stations' names to ensure they are added correctly
+                print("Filtered Stations: \(filteredStations.map { $0.stationName })")
+            }
+        case .failure(let error):
+            print("Error importing file: \(error.localizedDescription)")
+        }
+    }
+    
     private func filterStations() {
         filteredStations = stations.filter { station in
             // Country Filter
             if let country = selectedCountry, station.country != country {
                 return false
             }
-
             // County Filter
             if let selectedCounty = selectedCounty, station.county != selectedCounty {
                 return false
             }
-
             // TOC Filter
             if let toc = selectedTOC, station.toc != toc {
                 return false
             }
-
             // Visited Filter
             if showOnlyVisited && !station.visited {
                 return false
             }
-
             // Not Visited Filter
             if showOnlyNotVisited && station.visited {
                 return false
             }
-
             // Favorites Filter
             if showOnlyFavorites && !station.isFavorite {
                 return false
-            }
-
+               
+            // Debugging: Print the filtered stations' names to ensure they are added correctly
+                        print("Filtered Stations: \(filteredStations.map { $0.stationName })")
+                    }
+            
             // Search Query Filter
             if !searchQuery.isEmpty {
                 return station.stationName.localizedCaseInsensitiveContains(searchQuery) ||
@@ -208,7 +237,7 @@ struct StationTrackerView: View {
 
             let importedStations = StationDataManager.shared.parseCSV(from: fileURL, for: dataType)
             if importedStations.isEmpty {
-                errorMessage = "Failed to parse the \(dataType.name) CSV file." // This now works
+                errorMessage = "Failed to parse the \(dataType.displayName) CSV file."
             } else {
                 errorMessage = nil
                 stations.append(contentsOf: importedStations)
@@ -227,7 +256,7 @@ struct StationTrackerView: View {
                 rootViewController.present(activityVC, animated: true)
             }
         } else {
-            errorMessage = "Failed to export \(dataType.name) CSV." // This now works
+            errorMessage = "Failed to export \(dataType.displayName) CSV."
         }
     }
 

@@ -21,7 +21,7 @@ struct DataOptionsSheet: View {
             // Import Button
             Button(action: {
                 dismissAndPerform {
-                    selectedDataType = StationDataType.nationalRail // Default to National Rail for Import
+                    selectedDataType = StationDataType.nationalRail
                 }
             }) {
                 HStack {
@@ -36,7 +36,7 @@ struct DataOptionsSheet: View {
             // Export Button
             Button(action: {
                 dismissAndPerform {
-                    selectedDataType = StationDataType.nationalRail // Default to National Rail for Export
+                    selectedDataType = StationDataType.nationalRail
                 }
             }) {
                 HStack {
@@ -84,17 +84,8 @@ struct DataOptionsSheet: View {
             ActionSheet(
                 title: Text("Select Data Type"),
                 buttons: [
-                    .default(Text(StationDataType.nationalRail.name)) {
-                        handleDataTypeSelection(StationDataType.nationalRail)
-                    },
-                    .default(Text(StationDataType.northernIreland.name)) {
-                        handleDataTypeSelection(StationDataType.northernIreland)
-                    },
-                    .default(Text(StationDataType.ireland.name)) {
-                        handleDataTypeSelection(StationDataType.ireland)
-                    },
-                    .default(Text(StationDataType.metrolink.name)) {
-                        handleDataTypeSelection(StationDataType.metrolink)
+                    .default(Text(dataType.displayName)) {
+                        onImport(dataType)
                     },
                     .cancel()
                 ]
@@ -109,21 +100,12 @@ struct DataOptionsSheet: View {
         }
     }
 
-    // MARK: - Helper Methods
-
-    private func handleDataTypeSelection(_ dataType: StationDataType) {
-        if dataType == StationDataType.nationalRail ||
-            dataType == StationDataType.northernIreland ||
-            dataType == StationDataType.ireland ||
-            dataType == StationDataType.metrolink {
-            onImport(dataType)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                showFilePicker = true
-            }
-        } else {
-            onExport(dataType)
+    // Helper Methods
+    private func dismissAndPerform(action: @escaping () -> Void) {
+        presentationMode.wrappedValue.dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            action()
         }
-        selectedDataType = nil
     }
 
     private func handleFilePicker(result: Result<[URL], Error>) {
@@ -131,16 +113,8 @@ struct DataOptionsSheet: View {
         case .success(let urls):
             guard let fileURL = urls.first else { return }
             print("File selected: \(fileURL.lastPathComponent)")
-            // Implement logic to handle the imported file
         case .failure(let error):
             print("File picker error: \(error.localizedDescription)")
-        }
-    }
-
-    private func dismissAndPerform(action: @escaping () -> Void) {
-        presentationMode.wrappedValue.dismiss()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            action()
         }
     }
 }

@@ -1,16 +1,9 @@
 import SwiftUI
-import UniformTypeIdentifiers
 import WidgetKit
 
 struct StationTrackerView: View {
-    @State private var stations: [StationRecord] = [] {
-        didSet {
-            StationDataManager.shared.saveStationsToDisk(stations)
-            saveStatisticsToSharedContainer()
-        }
-    }
+    @State private var stations: [StationRecord] = []
     @State private var filteredStations: [StationRecord] = []
-    @State private var importedStations: [StationRecord] = []
     @State private var searchQuery: String = ""
     @State private var showFilePicker: Bool = false
     @State private var showAddStationForm: Bool = false
@@ -40,7 +33,7 @@ struct StationTrackerView: View {
                     .onChange(of: searchQuery) { _ in
                         filterStations()
                     }
-                
+
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
@@ -52,16 +45,35 @@ struct StationTrackerView: View {
                         .padding()
                 } else {
                     List {
-                        ForEach(filteredStations) { station in
-                            StationCard(
-                                station: station,
-                                onUpdate: updateStation,
-                                onNavigate: {
-                                    // Navigate logic
+                        ForEach($filteredStations, id: \.id) { $station in
+                            ZStack {
+                                NavigationLink(
+                                    destination: StationDetailView(
+                                        station: $station, // Use the binding here
+                                        onUpdate: { updatedStation in
+                                            updateStation(updatedStation)
+                                        }
+                                    )
+                                ) {
+                                    EmptyView() // Invisible NavigationLink
                                 }
-                            )
+                                .opacity(0) // Keeps the NavigationLink functional but invisible
+
+                                StationCard(
+                                    station: $station, // Pass binding to the station
+                                    onUpdate: { updatedStation in
+                                        updateStation(updatedStation)
+                                    },
+                                    onNavigate: {
+                                        // Navigation logic or additional actions
+                                    }
+                                )
+                            }
                         }
-                        .onDelete(perform: deleteStation)
+                        .onDelete { indices in
+                            stations.remove(atOffsets: indices) // Remove from the original stations array
+                            filterStations() // Reapply the filter
+                        }
                     }
                     .listStyle(PlainListStyle())
                 }
@@ -131,8 +143,61 @@ struct StationTrackerView: View {
             }
         }
     }
-    
+
     // MARK: - Helper Methods
+
+    private func filterStations() {
+        filteredStations = stations.filter { station in
+            // Country Filter
+            if let country = selectedCountry, station.country != country {
+                return false
+            }
+            // County Filter
+            if let selectedCounty = selectedCounty, station.county != selectedCounty {
+                return false
+            }
+            // TOC Filter
+            if let toc = selectedTOC, station.toc != toc {
+                return false
+            }
+            // Visited Filter
+            if showOnlyVisited && !station.visited {
+                return false
+            }
+            // Not Visited Filter
+            if showOnlyNotVisited && station.visited {
+                return false
+            }
+            // Favorites Filter
+            if showOnlyFavorites && !station.isFavorite {
+                return false
+            }
+            // Search Query Filter
+            if !searchQuery.isEmpty {
+                return station.stationName.localizedCaseInsensitiveContains(searchQuery) ||
+                       station.country.localizedCaseInsensitiveContains(searchQuery) ||
+                       station.county.localizedCaseInsensitiveContains(searchQuery) ||
+                       station.toc.localizedCaseInsensitiveContains(searchQuery)
+            }
+            return true
+        }
+    }
+
+    private func addStation(_ newStation: StationRecord) {
+        stations.append(newStation)
+        filterStations()
+    }
+
+    private func updateStation(_ updatedStation: StationRecord) {
+        if let index = stations.firstIndex(where: { $0.id == updatedStation.id }) {
+            stations[index] = updatedStation
+        }
+    }
+
+    private func deleteStation(at offsets: IndexSet) {
+        stations.remove(atOffsets: offsets)
+        filterStations()
+    }
 
     private func handleFilePicker(result: Result<[URL], Error>) {
         switch result {
@@ -167,86 +232,6 @@ struct StationTrackerView: View {
             print("Error importing file: \(error.localizedDescription)")
         }
     }
-    
-    private func filterStations() {
-        filteredStations = stations.filter { station in
-            // Country Filter
-            if let country = selectedCountry, station.country != country {
-                return false
-            }
-            // County Filter
-            if let selectedCounty = selectedCounty, station.county != selectedCounty {
-                return false
-            }
-            // TOC Filter
-            if let toc = selectedTOC, station.toc != toc {
-                return false
-            }
-            // Visited Filter
-            if showOnlyVisited && !station.visited {
-                return false
-            }
-            // Not Visited Filter
-            if showOnlyNotVisited && station.visited {
-                return false
-            }
-            // Favorites Filter
-            if showOnlyFavorites && !station.isFavorite {
-                return false
-               
-            // Debugging: Print the filtered stations' names to ensure they are added correctly
-                        print("Filtered Stations: \(filteredStations.map { $0.stationName })")
-                    }
-            
-            // Search Query Filter
-            if !searchQuery.isEmpty {
-                return station.stationName.localizedCaseInsensitiveContains(searchQuery) ||
-                       station.country.localizedCaseInsensitiveContains(searchQuery) ||
-                       station.county.localizedCaseInsensitiveContains(searchQuery) ||
-                       station.toc.localizedCaseInsensitiveContains(searchQuery)
-            }
-
-            return true
-        }
-    }
-
-    private func addStation(_ newStation: StationRecord) {
-        stations.append(newStation)
-        filterStations()
-    }
-
-    private func updateStation(_ updatedStation: StationRecord) {
-        if let index = stations.firstIndex(where: { $0.id == updatedStation.id }) {
-            stations[index] = updatedStation
-            filterStations()
-        }
-    }
-
-    private func deleteStation(at offsets: IndexSet) {
-        stations.remove(atOffsets: offsets)
-        filterStations()
-    }
-
-    private func handleFileImport(result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let fileURL = urls.first, let dataType = selectedDataType else {
-                errorMessage = "No file selected or data type not chosen."
-                return
-            }
-
-            let importedStations = StationDataManager.shared.parseCSV(from: fileURL, for: dataType)
-            if importedStations.isEmpty {
-                errorMessage = "Failed to parse the \(dataType.displayName) CSV file."
-            } else {
-                errorMessage = nil
-                stations.append(contentsOf: importedStations)
-                filterStations()
-            }
-        case .failure(let error):
-            errorMessage = "Error importing file: \(error.localizedDescription)"
-        }
-    }
 
     private func exportCSV(for dataType: StationDataType) {
         if let exportedFileURL = StationDataManager.shared.exportStationsToCSV(stations: stations, for: dataType) {
@@ -261,8 +246,8 @@ struct StationTrackerView: View {
     }
 
     private func loadStations() {
+        // Load the stations from data manager or wherever your data is stored
         stations = StationDataManager.shared.loadStationsFromDisk()
-        filterStations()
     }
 
     private func saveStatisticsToSharedContainer() {

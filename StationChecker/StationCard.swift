@@ -1,17 +1,17 @@
 import SwiftUI
 
 struct StationCard: View {
-    @State var station: StationRecord
-    var onUpdate: (StationRecord) -> Void
+    @Binding var station: StationRecord // Pass the station as a binding
+        var onUpdate: (StationRecord) -> Void // Call onUpdate to send changes back to StationTrackerView
     var onNavigate: () -> Void // Callback for navigation
 
     var body: some View {
         ZStack {
             NavigationLink(
                 destination: StationDetailView(
-                    station: station,
+                    station: $station, // Pass Binding to StationDetailView
                     onUpdate: { updatedStation in
-                        onUpdate(updatedStation)
+                        onUpdate(updatedStation) // Send updated station back to parent
                     }
                 )
             ) {

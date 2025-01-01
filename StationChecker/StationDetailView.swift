@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct StationDetailView: View {
-    @State var station: StationRecord
+    @Binding var station: StationRecord  // Binding to update station in the parent view
     var onUpdate: (StationRecord) -> Void
 
     @State private var isEditing: Bool = false

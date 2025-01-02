@@ -1,6 +1,6 @@
 import Foundation
 
-enum StationDataType: String, CaseIterable, Identifiable {
+enum DataType: String, CaseIterable, Identifiable {
     case nationalRail = "National Rail"
     case northernIreland = "Northern Ireland Railways"
     case ireland = "Ireland Rail"

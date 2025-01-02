@@ -10,13 +10,13 @@ import SwiftUI
 
 struct SelectDataTypeView: View {
     var actionTitle: String // "Import" or "Export"
-    var onSelect: (StationDataType) -> Void // Callback for the selected data type
+    var onSelect: (DataType) -> Void // Callback for the selected data type
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         NavigationView {
             List {
-                ForEach(StationDataType.allCases) { dataType in
+                ForEach(DataType.allCases) { dataType in
                     Button(action: {
                         onSelect(dataType)
                         presentationMode.wrappedValue.dismiss()

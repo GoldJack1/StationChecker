@@ -2,14 +2,14 @@ import SwiftUI
 import Charts
 
 struct StatisticsView: View {
-    let stations: [StationRecord]
+    let stations: [UKNatRailRecord]
 
     // Filter State
     @State private var selectedCountry: String? = nil
     @State private var selectedCounty: String? = nil
 
     // Filtered Stations
-    private var filteredStations: [StationRecord] {
+    private var filteredStations: [UKNatRailRecord] {
         stations.filter { station in
             if let country = selectedCountry, station.country != country {
                 return false

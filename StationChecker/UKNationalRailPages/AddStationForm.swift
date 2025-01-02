@@ -14,7 +14,7 @@ struct AddStationForm: View {
     @State private var newUsageValue: String = ""
 
     // Closure to handle adding a new station
-    var onAddStation: (StationRecord) -> Void
+    var onAddStation: (UKNatRailRecord) -> Void
 
     // Environment variable to manage the presentation
     @Environment(\.dismiss) private var dismiss
@@ -22,7 +22,7 @@ struct AddStationForm: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Station Details")) {
+                Section(header: Text("Add National Rail Station")) {
                     TextField("Station Name", text: $stationName)
                     TextField("Country", text: $country)
                     TextField("County", text: $county)
@@ -84,7 +84,7 @@ struct AddStationForm: View {
     }
 
     private func addStation() {
-        let newStation = StationRecord(
+        let newStation = UKNatRailRecord(
             stationName: stationName,
             country: country,
             county: county,

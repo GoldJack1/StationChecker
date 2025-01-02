@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct DataTypeSelectionSheet: View {
-    var onSelection: (StationDataType) -> Void
+    var onSelection: (DataType) -> Void
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         NavigationView {
             List {
-                ForEach(StationDataType.allCases) { dataType in
+                ForEach(DataType.allCases) { dataType in
                     Button(action: {
                         dismissAndPerform {
                             onSelection(dataType)

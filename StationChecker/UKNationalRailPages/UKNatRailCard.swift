@@ -1,17 +1,17 @@
 import SwiftUI
 
-struct StationCard: View {
-    @Binding var station: StationRecord // Pass the station as a binding
-        var onUpdate: (StationRecord) -> Void // Call onUpdate to send changes back to StationTrackerView
+struct UKNatRailCard: View {
+    @Binding var station: UKNatRailRecord // Pass the station as a binding
+        var onUpdate: (UKNatRailRecord) -> Void // Call onUpdate to send changes back to UKNatRailTrackerView
     var onNavigate: () -> Void // Callback for navigation
 
     var body: some View {
         ZStack {
             NavigationLink(
-                destination: StationDetailView(
-                    station: $station, // Pass Binding to StationDetailView
-                    onUpdate: { updatedStation in
-                        onUpdate(updatedStation) // Send updated station back to parent
+                destination: UKNatRailDetailView(
+                    station: $station, // Pass Binding to UKNatRailDetailView
+                    onUpdate: { updatedUKNatRail in
+                        onUpdate(updatedUKNatRail) // Send updated station back to parent
                     }
                 )
             ) {
@@ -20,7 +20,7 @@ struct StationCard: View {
             .opacity(0) // Makes it invisible but still functional
             
             VStack(alignment: .leading, spacing: 12) { // Reduced spacing
-                // Station Name
+                // UKNatRail Name
                 HStack {
                     Text(station.stationName)
                         .font(.headline)

@@ -1,15 +1,15 @@
 import SwiftUI
 
-struct StationDetailView: View {
-    @Binding var station: StationRecord  // Binding to update station in the parent view
-    var onUpdate: (StationRecord) -> Void
+struct UKNatRailDetailView: View {
+    @Binding var station: UKNatRailRecord  // Binding to update station in the parent view
+    var onUpdate: (UKNatRailRecord) -> Void
 
     @State private var isEditing: Bool = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Station Info Section
+                // UKNatRail Info Section
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -17,7 +17,7 @@ struct StationDetailView: View {
                                 .foregroundColor(.blue)
                                 .font(.system(size: 32, weight: .bold))
                             if isEditing {
-                                styledTextField("Station Name", text: $station.stationName)
+                                styledTextField("UKNatRail Name", text: $station.stationName)
                                     .font(.title)
                                     .fontWeight(.semibold)
                             } else {

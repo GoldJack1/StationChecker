@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct DataOptionsSheet: View {
-    var onImport: (StationDataType) -> Void
-    var onExport: (StationDataType) -> Void
+    var onImport: (DataType) -> Void
+    var onExport: (DataType) -> Void
     var onClearData: () -> Void
     var onAddStation: () -> Void
     @Environment(\.presentationMode) var presentationMode

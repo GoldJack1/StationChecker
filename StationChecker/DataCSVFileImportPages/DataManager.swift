@@ -203,6 +203,7 @@ class DataManager {
             .appendingPathComponent("stations.json")
     }
     
+    // MARK: - Shared File URL
     private var sharedFileURL: URL {
         guard let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.gbr.statistics") else {
             fatalError("App Group is not configured correctly.")
@@ -222,14 +223,15 @@ class DataManager {
             let savedStations = try JSONDecoder().decode([UKNatRailRecord].self, from: savedData)
             print("[DataManager] Saved stations count: \(savedStations.count)")
 
-            // Notify the widget
+            // Trigger widget update
             WidgetCenter.shared.reloadAllTimelines()
+            print("[DataManager] Widget timelines reloaded.")
         } catch {
             print("[DataManager] Error saving stations to disk: \(error)")
         }
     }
 
-    // MARK: - Load National Rail Data from Disk
+    // MARK: - Load Stations from Disk
     func loadStationsFromDisk() -> [UKNatRailRecord] {
         do {
             let data = try Data(contentsOf: sharedFileURL)
@@ -247,10 +249,40 @@ class DataManager {
         do {
             try FileManager.default.removeItem(at: sharedFileURL)
             print("[DataManager] Stations file cleared at: \(sharedFileURL.path)")
+            
+            guard let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics") else { return }
+            sharedDefaults.removeObject(forKey: "totalStations")
+            sharedDefaults.removeObject(forKey: "visitedStations")
+            sharedDefaults.removeObject(forKey: "notVisitedStations")
+            sharedDefaults.removeObject(forKey: "percentageVisited")
+
+            // Trigger widget update
             WidgetCenter.shared.reloadAllTimelines()
+            print("[DataManager] Widget timelines reloaded after clearing data.")
         } catch {
             print("[DataManager] Error clearing stations file: \(error)")
         }
+    }
+
+    func saveStatisticsToSharedContainer(stations: [UKNatRailRecord]) {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics") else {
+            print("[DataManager] Shared defaults not found.")
+            return
+        }
+
+        let totalStations = stations.count
+        let visitedStations = stations.filter { $0.visited }.count
+        let notVisitedStations = totalStations - visitedStations
+        let percentageVisited = totalStations > 0 ? (Double(visitedStations) / Double(totalStations)) * 100 : 0.0
+
+        sharedDefaults.set(totalStations, forKey: "totalStations")
+        sharedDefaults.set(visitedStations, forKey: "visitedStations")
+        sharedDefaults.set(notVisitedStations, forKey: "notVisitedStations")
+        sharedDefaults.set(percentageVisited, forKey: "percentageVisited")
+
+        // Trigger widget update
+        WidgetCenter.shared.reloadAllTimelines()
+        print("[DataManager] Statistics saved and widget timeline reloaded.")
     }
 
     private var dateFormatter: DateFormatter {

@@ -12,6 +12,7 @@ struct UKNatRailTrackerView: View {
     @State private var showDataOptionsSheet: Bool = false
     @State private var selectedDataType: DataType? = nil
     @State private var errorMessage: String? = nil
+    @State private var debounceWorkItem: DispatchWorkItem?
     
     // Filter State
     @State private var selectedCountry: String? = nil
@@ -30,8 +31,8 @@ struct UKNatRailTrackerView: View {
                     .background(Color(.systemGray6))
                     .cornerRadius(8)
                     .padding(.horizontal)
-                    .onChange(of: searchQuery) { _ in
-                        filterUKNatRails()
+                    .onChange(of: searchQuery) {
+                        debounceFilter()
                     }
                 
                 if let errorMessage = errorMessage {
@@ -168,23 +169,40 @@ struct UKNatRailTrackerView: View {
     private func addUKNatRail(_ newStation: UKNatRailRecord) {
         stations.append(newStation)
         DataManager.shared.saveStationsToDisk(stations)
-        print("[UKNatRailTrackerView] Added station: \(newStation.stationName). Total: \(stations.count).")
+        DataManager.shared.saveStatisticsToSharedContainer(stations: stations)
         filterUKNatRails()
+        print("[UKNatRailTrackerView] Added station: \(newStation.stationName). Total: \(stations.count).")
     }
     
     private func updateUKNatRail(_ updatedUKNatRail: UKNatRailRecord) {
         if let index = stations.firstIndex(where: { $0.id == updatedUKNatRail.id }) {
             stations[index] = updatedUKNatRail
-            DataManager.shared.saveStationsToDisk(stations)
-            print("[UKNatRailTrackerView] Updated station: \(updatedUKNatRail.stationName).")
+            DataManager.shared.saveStationsToDisk(stations) // Save updated stations to disk
+            DataManager.shared.saveStatisticsToSharedContainer(stations: stations) // Update widget statistics
+            print("[UKNatRailTrackerView] Updated station: \(updatedUKNatRail.stationName). Visit status: \(updatedUKNatRail.visited).")
         }
     }
     
     private func deleteUKNatRail(at offsets: IndexSet) {
         stations.remove(atOffsets: offsets)
         DataManager.shared.saveStationsToDisk(stations)
-        print("[UKNatRailTrackerView] Deleted station(s). Total: \(stations.count).")
+        DataManager.shared.saveStatisticsToSharedContainer(stations: stations)
         filterUKNatRails()
+        print("[UKNatRailTrackerView] Deleted station(s). Total: \(stations.count).")
+    }
+    
+    private func debounceFilter() {
+        // Cancel any existing debounce operation
+        debounceWorkItem?.cancel()
+
+        // Create a new debounce operation
+        let workItem = DispatchWorkItem {
+            filterUKNatRails()
+        }
+
+        // Store the work item and execute it after a delay
+        debounceWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
     }
     
     private func exportCSV(for dataType: DataType) {

@@ -74,12 +74,11 @@ struct UKNatRailDetailView: View {
                             Text("Visited")
                                 .font(.body)
                         }
-                        .onChange(of: station.visited) { _ in
+                        .onChange(of: station.visited) {
                             if !station.visited {
                                 station.visitDate = nil
                             }
                         }
-
                         if station.visited {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Visit Date")

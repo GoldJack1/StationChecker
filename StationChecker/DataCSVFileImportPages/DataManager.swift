@@ -113,22 +113,57 @@ class DataManager {
 
         do {
             let csvContent = try String(contentsOf: fileURL, encoding: .utf8)
-            let rows = csvContent.components(separatedBy: "\n").dropFirst()
+            let rows = csvContent.components(separatedBy: "\n")
+            guard let headerRow = rows.first else {
+                print("[DataManager] CSV file is empty.")
+                return []
+            }
 
-            for row in rows {
+            let headers = parseCSVRow(row: headerRow, delimiter: ",")
+            let rowsWithoutHeader = rows.dropFirst()
+
+            // Determine column indices dynamically
+            let stationNameIndex = headers.firstIndex(of: "Station Name") ?? 0
+            let countryIndex = headers.firstIndex(of: "Country") ?? 1
+            let countyIndex = headers.firstIndex(of: "County") ?? 2
+            let tocIndex = headers.firstIndex(of: "Operator") ?? 3
+            let visitedIndex = headers.firstIndex(of: "Visited")
+            let visitDateIndex = headers.firstIndex(of: "Visit Date")
+            let favoriteIndex = headers.firstIndex(of: "Favorite")
+            let latitudeIndex = headers.firstIndex(of: "Latitude") ?? 7
+            let longitudeIndex = headers.firstIndex(of: "Longitude") ?? 8
+            let usageDataStartIndex = max(latitudeIndex, longitudeIndex) + 1
+
+            for row in rowsWithoutHeader {
                 let columns = parseCSVRow(row: row, delimiter: ",")
-                guard columns.count >= 8 else { continue }
+                guard columns.count >= headers.count else {
+                    print("[DataManager] Skipping misaligned row: \(row)")
+                    continue
+                }
 
-                let stationName = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
-                let country = columns[1].trimmingCharacters(in: .whitespacesAndNewlines)
-                let county = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                let toc = columns[3].trimmingCharacters(in: .whitespacesAndNewlines)
-                let visited = columns[4].trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes"
-                let visitDate: Date? = nil
-                let isFavorite = false
-                let latitude = Double(columns[5]) ?? 0.0
-                let longitude = Double(columns[6]) ?? 0.0
-                let usageData = parseUsageData(columns: Array(columns[7...]), startYear: 2024)
+                // Parse required fields
+                let stationName = columns[safe: stationNameIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+                let country = columns[safe: countryIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+                let county = columns[safe: countyIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+                let toc = columns[safe: tocIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
+
+                // Handle optional fields (add default values if missing)
+                let visited = visitedIndex != nil
+                    ? (columns[safe: visitedIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes")
+                    : false
+                let visitDate = visitDateIndex != nil
+                    ? dateFormatter.date(from: columns[safe: visitDateIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
+                    : nil
+                let isFavorite = favoriteIndex != nil
+                    ? (columns[safe: favoriteIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "yes")
+                    : false
+
+                // Parse latitude and longitude
+                let latitude = Double(columns[safe: latitudeIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "0.0") ?? 0.0
+                let longitude = Double(columns[safe: longitudeIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "0.0") ?? 0.0
+
+                // Parse usage data
+                let usageData = parseUsageData(columns: Array(columns[usageDataStartIndex...]), startYear: 2024)
 
                 let station = UKNatRailRecord(
                     stationName: stationName,
@@ -146,7 +181,7 @@ class DataManager {
                 loadedStations.append(station)
             }
         } catch {
-            print("Error parsing National Rail CSV: \(error)")
+            print("[DataManager] Error parsing National Rail CSV: \(error)")
         }
 
         return loadedStations
@@ -289,5 +324,11 @@ class DataManager {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
+    }
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }

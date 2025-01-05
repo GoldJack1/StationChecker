@@ -2,6 +2,7 @@ import SwiftUI
 import WidgetKit
 
 struct UKNatRailTrackerView: View {
+    @Environment(\.presentationMode) var presentationMode
     @State private var stations: [UKNatRailRecord] = []
     @State private var filteredUKNatRails: [UKNatRailRecord] = []
     @State private var searchQuery: String = ""
@@ -13,7 +14,7 @@ struct UKNatRailTrackerView: View {
     @State private var selectedDataType: DataType? = nil
     @State private var errorMessage: String? = nil
     @State private var debounceWorkItem: DispatchWorkItem?
-    
+
     // Filter State
     @State private var selectedCountry: String? = nil
     @State private var selectedCounty: String? = nil
@@ -21,132 +22,139 @@ struct UKNatRailTrackerView: View {
     @State private var showOnlyVisited: Bool = false
     @State private var showOnlyNotVisited: Bool = false
     @State private var showOnlyFavorites: Bool = false
-    
+
     var body: some View {
-        NavigationView {
-            VStack {
+        VStack(spacing: 0) {
+            // First Row: Back Button and Page Title
+            HStack {
+                // Back Button
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
+                }
+
+                Spacer()
+                Spacer()
+
+                // Page Title
+                Text("GB National Rail")
+                    .font(.title)
+                    .bold()
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 10)
+            .background(Color(.systemGray6))
+            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+
+            // Second Row: Search Bar and Buttons
+            HStack {
                 // Search Bar
-                TextField("Search stations...", text: $searchQuery)
+                TextField(" Search Stations", text: $searchQuery)
                     .padding(10)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                    .padding(.horizontal)
-                    .onChange(of: searchQuery) {
+                    .background(Color(.systemGray5))
+                    .cornerRadius(25)
+                    .onChange(of: searchQuery) { oldValue, newValue in
                         debounceFilter()
-                    }
-                
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
-                } else if filteredUKNatRails.isEmpty {
-                    Text("No stations to display.\nImport a CSV file to get started.")
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
-                        .padding()
-                } else {
-                    List {
-                        ForEach($filteredUKNatRails, id: \.id) { $station in
-                            ZStack {
-                                NavigationLink(
-                                    destination: UKNatRailDetailView(
-                                        station: $station,
-                                        onUpdate: { updatedUKNatRail in
-                                            updateUKNatRail(updatedUKNatRail)
-                                        }
-                                    )
-                                ) {
-                                    EmptyView()
-                                }
-                                .opacity(0)
-                                
-                                UKNatRailCard(
+                }
+
+                // Add Station Button
+                Button(action: { showAddStationForm = true }) {
+                    Image(systemName: "plus")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
+                }
+
+                // Statistics Button
+                Button(action: { showStatisticsView = true }) {
+                    Image(systemName: "chart.bar")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
+                }
+
+                // Filter Button
+                Button(action: { showFilterSheet = true }) {
+                    Image(systemName: "line.horizontal.3.decrease.circle")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
+                }
+
+                // Import/Export Button
+                Button(action: { showDataOptionsSheet = true }) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 10)
+            .background(Color(.systemGray6))
+
+            // Content
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .padding()
+            } else if filteredUKNatRails.isEmpty {
+                Text("No stations to display.\nImport a CSV file to get started.")
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding()
+            } else {
+                List {
+                    ForEach($filteredUKNatRails, id: \.id) { $station in
+                        ZStack {
+                            NavigationLink(
+                                destination: UKNatRailDetailView(
                                     station: $station,
                                     onUpdate: { updatedUKNatRail in
                                         updateUKNatRail(updatedUKNatRail)
-                                    },
-                                    onNavigate: { /* Add custom navigation actions if needed */ }
+                                    }
                                 )
+                            ) {
+                                EmptyView()
                             }
+                            .opacity(0)
+
+                            UKNatRailCard(
+                                station: $station,
+                                onUpdate: { updatedUKNatRail in
+                                    updateUKNatRail(updatedUKNatRail)
+                                },
+                                onNavigate: { /* Add custom navigation actions if needed */ }
+                            )
                         }
-                        .onDelete { indices in
-                            deleteUKNatRail(at: indices)
-                        }
                     }
-                    .listStyle(PlainListStyle())
-                }
-            }
-            .navigationTitle("National Rail Tracker")
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button(action: { showStatisticsView = true }) {
-                        Image(systemName: "chart.bar")
-                    }
-                    Button(action: { showFilterSheet = true }) {
-                        Image(systemName: "line.horizontal.3.decrease.circle")
-                    }
-                    Button(action: { showDataOptionsSheet = true }) {
-                        Image(systemName: "ellipsis.circle")
+                    .onDelete { indices in
+                        deleteUKNatRail(at: indices)
                     }
                 }
-            }
-            .sheet(isPresented: $showAddStationForm) {
-                AddStationForm(onAddStation: { newStation in
-                    addUKNatRail(newStation)
-                })
-            }
-            .sheet(isPresented: $showFilterSheet) {
-                FilterSheet(
-                    countries: Array(Set(stations.map { $0.country })).sorted(),
-                    counties: Array(Set(stations.map { $0.county })).sorted(),
-                    tocs: Array(Set(stations.map { $0.toc })).sorted(),
-                    selectedCountry: $selectedCountry,
-                    selectedCounty: $selectedCounty,
-                    selectedTOC: $selectedTOC,
-                    showOnlyVisited: $showOnlyVisited,
-                    showOnlyNotVisited: $showOnlyNotVisited,
-                    showOnlyFavorites: $showOnlyFavorites,
-                    onApply: filterUKNatRails
-                )
-            }
-            .sheet(isPresented: $showStatisticsView) {
-                StatisticsView(stations: stations)
-            }
-            .sheet(isPresented: $showDataOptionsSheet) {
-                DataOptionsSheet(
-                    onImport: { dataType in
-                        selectedDataType = dataType
-                        showFilePicker = true
-                    },
-                    onExport: { dataType in
-                        exportCSV(for: dataType)
-                    },
-                    onClearData: {
-                        stations.removeAll()
-                        DataManager.shared.clearStations()
-                        print("[UKNatRailTrackerView] Cleared all data.")
-                        filterUKNatRails()
-                    },
-                    onAddStation: {
-                        showAddStationForm = true
-                    }
-                )
-            }
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: [.commaSeparatedText],
-                allowsMultipleSelection: false
-            ) { result in
-                handleFilePicker(result: result)
+                .listStyle(PlainListStyle())
             }
         }
+        .navigationBarHidden(true) // Hide the default navigation bar
         .onAppear {
             loadUKNatRails()
         }
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func filterUKNatRails() {
         filteredUKNatRails = stations.filter { station in
             if let country = selectedCountry, station.country != country { return false }

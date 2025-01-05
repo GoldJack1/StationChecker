@@ -20,29 +20,29 @@ struct HomePageView: View {
                     // Tracker Options
                     VStack(alignment: .leading, spacing: 20) {
                         TrackerCard(
-                            title: "UK National Rail Tracker",
-                            subtitle: "Track stations and journeys across the UK.",
+                            title: "GB National Rail",
+                            subtitle: "Track stations visited across Great Britain.",
                             systemImage: "train.side.front.car",
                             destination: UKNatRailTrackerView()
                         )
 
                         TrackerCard(
-                            title: "Northern Ireland Tracker",
-                            subtitle: "Explore Northern Ireland's rail network.",
+                            title: "Northern Ireland",
+                            subtitle: "Track stations visited across Northern Ireland.",
                             systemImage: "building.2.crop.circle",
                             destination: PlaceholderView(title: "Northern Ireland Tracker")
                         )
 
                         TrackerCard(
-                            title: "Ireland Tracker",
-                            subtitle: "Discover stations in Ireland.",
+                            title: "Ireland",
+                            subtitle: "Track stations visited across Ireland.",
                             systemImage: "ferry",
                             destination: PlaceholderView(title: "Ireland Tracker")
                         )
 
                         TrackerCard(
-                            title: "Manchester Metrolink Tracker",
-                            subtitle: "Monitor stations on the Manchester Metrolink.",
+                            title: "Manchester Metrolink",
+                            subtitle: "Track Stops visited on the Manchester Metrolink.",
                             systemImage: "tram",
                             destination: PlaceholderView(title: "Manchester Metrolink Tracker")
                         )

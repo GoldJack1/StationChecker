@@ -73,6 +73,13 @@
 			);
 			target = 740D97802D21E9E800AA1648 /* StatisticsWidgetExtension */;
 		};
+		74FC01B02D28752A001A9661 /* Exceptions for "StationChecker" folder in "StationChecker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 74B06D592D1AD96B007C55D6 /* StationChecker */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -90,6 +97,9 @@
 		};
 		74B06D5C2D1AD96C007C55D6 /* StationChecker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				74FC01B02D28752A001A9661 /* Exceptions for "StationChecker" folder in "StationChecker" target */,
+			);
 			path = StationChecker;
 			sourceTree = "<group>";
 		};
@@ -602,6 +612,7 @@
 				DEVELOPMENT_TEAM = 69296J7389;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StationChecker/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = STNChecker;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -643,6 +654,7 @@
 				DEVELOPMENT_TEAM = 69296J7389;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StationChecker/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = STNChecker;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.navigation";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomePageView: View {
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -18,41 +20,79 @@ struct HomePageView: View {
                     .padding(.horizontal)
 
                     // Tracker Options
-                    VStack(alignment: .leading, spacing: 20) {
-                        TrackerCard(
-                            title: "GB National Rail",
-                            subtitle: "Track stations visited across Great Britain.",
-                            systemImage: "train.side.front.car",
-                            destination: UKNatRailTrackerView()
-                        )
+                    if horizontalSizeClass == .compact {
+                        VStack(alignment: .leading, spacing: 20) {
+                            TrackerCard(
+                                title: "Great Britain",
+                                subtitle: "Track stations visited across Great Britain.",
+                                pngName: "gbnr",
+                                destination: UKNatRailTrackerView()
+                            )
 
-                        TrackerCard(
-                            title: "Northern Ireland",
-                            subtitle: "Track stations visited across Northern Ireland.",
-                            systemImage: "building.2.crop.circle",
-                            destination: PlaceholderView(title: "Northern Ireland Tracker")
-                        )
+                            TrackerCard(
+                                title: "Northern Ireland",
+                                subtitle: "Coming soon.",
+                                pngName: "nir",
+                                destination: PlaceholderView(title: "Northern Ireland Tracker")
+                            )
 
-                        TrackerCard(
-                            title: "Ireland",
-                            subtitle: "Track stations visited across Ireland.",
-                            systemImage: "ferry",
-                            destination: PlaceholderView(title: "Ireland Tracker")
-                        )
+                            TrackerCard(
+                                title: "Ireland",
+                                subtitle: "Coming soon.",
+                                pngName: "irerail",
+                                destination: PlaceholderView(title: "Ireland Tracker")
+                            )
 
-                        TrackerCard(
-                            title: "Manchester Metrolink",
-                            subtitle: "Track Stops visited on the Manchester Metrolink.",
-                            systemImage: "tram",
-                            destination: PlaceholderView(title: "Manchester Metrolink Tracker")
-                        )
+                            TrackerCard(
+                                title: "Manchester Metrolink",
+                                subtitle: "Coming soon.",
+                                pngName: "manbeenet",
+                                destination: PlaceholderView(title: "Manchester Metrolink Tracker")
+                            )
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 300), spacing: 20)],
+                            spacing: 30
+                        ) {
+                            TrackerCard(
+                                title: "Great Britain",
+                                subtitle: "Track stations visited across Great Britain.",
+                                pngName: "gbnr",
+                                destination: UKNatRailTrackerView()
+                            )
+
+                            TrackerCard(
+                                title: "Northern Ireland",
+                                subtitle: "Coming soon.",
+                                pngName: "nir",
+                                destination: PlaceholderView(title: "Northern Ireland Tracker")
+                            )
+
+                            TrackerCard(
+                                title: "Ireland",
+                                subtitle: "Coming soon.",
+                                pngName: "irerail",
+                                destination: PlaceholderView(title: "Ireland Tracker")
+                            )
+
+                            TrackerCard(
+                                title: "Manchester Metrolink",
+                                subtitle: "Coming soon.",
+                                pngName: "manbeenet",
+                                destination: PlaceholderView(title: "Manchester Metrolink Tracker")
+                            )
+                        }
+                        .padding()
                     }
-                    .padding(.horizontal)
                 }
                 .padding(.top, 20)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationBarHidden(true) // Hides the navigation bar entirely
         }
+        .navigationViewStyle(StackNavigationViewStyle()) // Prevents sidebar behavior
     }
 }
 
@@ -60,17 +100,16 @@ struct HomePageView: View {
 struct TrackerCard<Destination: View>: View {
     let title: String
     let subtitle: String
-    let systemImage: String
+    let pngName: String
     let destination: Destination
 
     var body: some View {
         NavigationLink(destination: destination) {
             HStack(alignment: .top, spacing: 15) {
-                Image(systemName: systemImage)
+                Image(pngName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 50, height: 50)
-                    .foregroundColor(.accentColor)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(title)
@@ -80,7 +119,7 @@ struct TrackerCard<Destination: View>: View {
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading) // Fix alignment
+                        .multilineTextAlignment(.leading)
                 }
                 Spacer()
             }
@@ -116,6 +155,11 @@ struct PlaceholderView: View {
 
 struct HomePageView_Previews: PreviewProvider {
     static var previews: some View {
-        HomePageView()
+        Group {
+            HomePageView()
+                .previewDevice("iPhone 14")
+            HomePageView()
+                .previewDevice("iPad Pro (12.9-inch) (6th generation)")
+        }
     }
 }

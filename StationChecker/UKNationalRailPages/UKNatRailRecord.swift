@@ -1,6 +1,6 @@
 import Foundation
 
-struct UKNatRailRecord: Identifiable, Codable {
+struct UKNatRailRecord: Identifiable, Codable, Hashable {
     let id: UUID
     var stationName: String
     var country: String

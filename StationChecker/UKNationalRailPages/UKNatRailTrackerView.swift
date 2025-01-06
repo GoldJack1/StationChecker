@@ -25,85 +25,87 @@ struct UKNatRailTrackerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // First Row: Back Button and Page Title
-            HStack {
-                // Back Button
-                Button(action: {
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.title3)
-                        .padding(10)
-                        .background(Circle().fill(Color(.systemGray5)))
+            // Custom Header
+            VStack(spacing: 0) {
+                // First Row: Back Button and Page Title
+                HStack {
+                    // Back Button
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .font(.title3)
+                            .padding(10)
+                            .background(Circle().fill(Color(.systemGray5)))
+                            .foregroundColor(.primary)
+                    }
+
+                    Spacer()
+
+                    // Page Title
+                    Text("GB National Rail")
+                        .font(.title)
+                        .bold()
                         .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .padding(.horizontal)
+                .padding(.top, 10)
+                .padding(.bottom, 5)
+                .background(Color(.systemGray6))
+                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
 
-                Spacer()
-                Spacer()
+                // Second Row: Search Bar and Buttons
+                HStack {
+                    // Search Bar
+                    TextField("Search Stations", text: $searchQuery)
+                        .padding(10)
+                        .background(Color(.systemGray5))
+                        .cornerRadius(25)
+                        .onChange(of: searchQuery) { oldValue, newValue in
+                            debounceFilter()
+                        }
 
-                // Page Title
-                Text("GB National Rail")
-                    .font(.title)
-                    .bold()
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Add Station Button
+                    Button(action: { showAddStationForm = true }) {
+                        Image(systemName: "plus")
+                            .font(.title3)
+                            .padding(10)
+                            .background(Circle().fill(Color(.systemGray5)))
+                            .foregroundColor(.primary)
+                    }
+
+                    // Statistics Button
+                    Button(action: { showStatisticsView = true }) {
+                        Image(systemName: "chart.bar")
+                            .font(.title3)
+                            .padding(10)
+                            .background(Circle().fill(Color(.systemGray5)))
+                            .foregroundColor(.primary)
+                    }
+
+                    // Filter Button
+                    Button(action: { showFilterSheet = true }) {
+                        Image(systemName: "line.horizontal.3.decrease.circle")
+                            .font(.title3)
+                            .padding(10)
+                            .background(Circle().fill(Color(.systemGray5)))
+                            .foregroundColor(.primary)
+                    }
+
+                    // Import/Export Button
+                    Button(action: { showDataOptionsSheet = true }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                            .padding(10)
+                            .background(Circle().fill(Color(.systemGray5)))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 10)
+                .background(Color(.systemGray6))
             }
-            .padding(.horizontal)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
-            .background(Color(.systemGray6))
-            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-
-            // Second Row: Search Bar and Buttons
-            HStack {
-                // Search Bar
-                TextField(" Search Stations", text: $searchQuery)
-                    .padding(10)
-                    .background(Color(.systemGray5))
-                    .cornerRadius(25)
-                    .onChange(of: searchQuery) { oldValue, newValue in
-                        debounceFilter()
-                }
-
-                // Add Station Button
-                Button(action: { showAddStationForm = true }) {
-                    Image(systemName: "plus")
-                        .font(.title3)
-                        .padding(10)
-                        .background(Circle().fill(Color(.systemGray5)))
-                        .foregroundColor(.primary)
-                }
-
-                // Statistics Button
-                Button(action: { showStatisticsView = true }) {
-                    Image(systemName: "chart.bar")
-                        .font(.title3)
-                        .padding(10)
-                        .background(Circle().fill(Color(.systemGray5)))
-                        .foregroundColor(.primary)
-                }
-
-                // Filter Button
-                Button(action: { showFilterSheet = true }) {
-                    Image(systemName: "line.horizontal.3.decrease.circle")
-                        .font(.title3)
-                        .padding(10)
-                        .background(Circle().fill(Color(.systemGray5)))
-                        .foregroundColor(.primary)
-                }
-
-                // Import/Export Button
-                Button(action: { showDataOptionsSheet = true }) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.title3)
-                        .padding(10)
-                        .background(Circle().fill(Color(.systemGray5)))
-                        .foregroundColor(.primary)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 10)
-            .background(Color(.systemGray6))
 
             // Content
             if let errorMessage = errorMessage {
@@ -111,10 +113,14 @@ struct UKNatRailTrackerView: View {
                     .foregroundColor(.red)
                     .padding()
             } else if filteredUKNatRails.isEmpty {
-                Text("No stations to display.\nImport a CSV file to get started.")
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding()
+                VStack {
+                    Spacer()
+                    Text("No stations to display.\nImport a CSV file to get started.")
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                        .padding()
+                    Spacer()
+                }
             } else {
                 List {
                     ForEach($filteredUKNatRails, id: \.id) { $station in
@@ -147,9 +153,58 @@ struct UKNatRailTrackerView: View {
                 .listStyle(PlainListStyle())
             }
         }
-        .navigationBarHidden(true) // Hide the default navigation bar
+        .navigationBarHidden(true) // Ensure the default navigation bar is hidden
+        .toolbar(.hidden) // Ensures toolbar doesn't appear
         .onAppear {
             loadUKNatRails()
+        }
+        .sheet(isPresented: $showAddStationForm) {
+            AddStationForm(onAddStation: { newStation in
+                addUKNatRail(newStation)
+            })
+        }
+        .sheet(isPresented: $showFilterSheet) {
+            FilterSheet(
+                countries: Array(Set(stations.map { $0.country })).sorted(),
+                counties: Array(Set(stations.map { $0.county })).sorted(),
+                tocs: Array(Set(stations.map { $0.toc })).sorted(),
+                selectedCountry: $selectedCountry,
+                selectedCounty: $selectedCounty,
+                selectedTOC: $selectedTOC,
+                showOnlyVisited: $showOnlyVisited,
+                showOnlyNotVisited: $showOnlyNotVisited,
+                showOnlyFavorites: $showOnlyFavorites,
+                onApply: filterUKNatRails
+            )
+        }
+        .sheet(isPresented: $showStatisticsView) {
+            StatisticsView(stations: stations)
+        }
+        .sheet(isPresented: $showDataOptionsSheet) {
+            DataOptionsSheet(
+                onImport: { dataType in
+                    selectedDataType = dataType
+                    showFilePicker = true
+                },
+                onExport: { dataType in
+                    exportCSV(for: dataType)
+                },
+                onClearData: {
+                    stations.removeAll()
+                    DataManager.shared.clearStations()
+                    filterUKNatRails()
+                },
+                onAddStation: {
+                    showAddStationForm = true
+                }
+            )
+        }
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.commaSeparatedText],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFilePicker(result: result)
         }
     }
 
@@ -171,7 +226,6 @@ struct UKNatRailTrackerView: View {
             }
             return true
         }
-        print("[UKNatRailTrackerView] Filtered \(filteredUKNatRails.count) stations.")
     }
     
     private func addUKNatRail(_ newStation: UKNatRailRecord) {

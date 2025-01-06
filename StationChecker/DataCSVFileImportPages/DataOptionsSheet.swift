@@ -37,11 +37,6 @@ struct DataOptionsSheet: View {
                         Label("Clear All Data", systemImage: "trash")
                             .foregroundColor(.red)
                     }
-
-                    Button(action: onAddStation) {
-                        Label("Add Station", systemImage: "plus.circle")
-                            .foregroundColor(.orange)
-                    }
                 }
             }
             .navigationTitle("Data Options")

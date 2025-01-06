@@ -1,144 +1,145 @@
 import SwiftUI
 
 struct UKNatRailDetailView: View {
-    @Binding var station: UKNatRailRecord  // Binding to update station in the parent view
+    @Environment(\.presentationMode) var presentationMode
+    @Binding var station: UKNatRailRecord // Binding to update station in the parent view
     var onUpdate: (UKNatRailRecord) -> Void
 
     @State private var isEditing: Bool = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // UKNatRail Info Section
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "train.side.front.car")
-                                .foregroundColor(.blue)
-                                .font(.system(size: 32, weight: .bold))
-                            if isEditing {
-                                styledTextField("UKNatRail Name", text: $station.stationName)
-                                    .font(.title)
-                                    .fontWeight(.semibold)
-                            } else {
-                                Text(station.stationName)
-                                    .font(.title)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-
-                        Divider()
-
-                        infoRow(icon: "flag", label: "Country", text: $station.country)
-                        infoRow(icon: "map", label: "County", text: $station.county)
-                        infoRow(icon: "building.2", label: "Operator", text: $station.toc)
-                    }
-                    .padding()
+        VStack(spacing: 0) {
+            // Custom Header
+            HStack {
+                // Back Button
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
                 }
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
-
-                // Coordinates Section
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Coordinates")
-                            .font(.headline)
-                            .foregroundColor(.blue)
-
-                        fullWidthCoordinateRow(icon: "mappin.and.ellipse", label: "Latitude", value: $station.latitude)
-                        fullWidthCoordinateRow(icon: "location.north.line", label: "Longitude", value: $station.longitude)
-                    }
-                    .padding()
+                
+                Spacer()
+                
+                // Page Title
+                Text("Station Details")
+                    .font(.title)
+                    .bold()
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Spacer()
+                
+                // Edit Button
+                Button(action: toggleEditing) {
+                    Image(systemName: isEditing ? "checkmark" : "pencil")
+                        .font(.title3)
+                        .padding(10)
+                        .background(Circle().fill(Color(.systemGray5)))
+                        .foregroundColor(.primary)
                 }
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
-
-                // Visit Status Section
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Visited Status")
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                            Spacer()
-                            Button(action: toggleFavorite) {
-                                Image(systemName: station.isFavorite ? "star.fill" : "star")
-                                    .foregroundColor(.yellow)
-                                    .font(.system(size: 24))
-                            }
-                        }
-
-                        Toggle(isOn: $station.visited) {
-                            Text("Visited")
-                                .font(.body)
-                        }
-                        .onChange(of: station.visited) {
-                            if !station.visited {
-                                station.visitDate = nil
-                            }
-                        }
-                        if station.visited {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Visit Date")
-                                    .font(.headline) // Match "Visited Status" style
-                                    .foregroundColor(.blue)
-                                HStack {
-                                    Image(systemName: "calendar")
-                                        .foregroundColor(.blue)
-                                    DatePicker(
-                                        "",
-                                        selection: Binding<Date>(
-                                            get: { station.visitDate ?? Date() },
-                                            set: { station.visitDate = $0 }
-                                        ),
-                                        displayedComponents: [.date]
-                                    )
-                                    .labelsHidden()
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                }
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
-
-                // Usage Data Section
-                if !station.usageData.isEmpty {
+            }
+            .padding(.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 10)
+            .background(Color(.systemGray6))
+            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+            
+            // Scrollable Content
+            ScrollView {
+                VStack(spacing: 16) {
+                    // UKNatRail Info Section
                     Section {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Usage Data")
+                            HStack {
+                                Image(systemName: "train.side.front.car")
+                                    .foregroundColor(.blue)
+                                    .font(.system(size: 32, weight: .bold))
+                                if isEditing {
+                                    styledTextField("UKNatRail Name", text: $station.stationName)
+                                        .font(.title)
+                                        .fontWeight(.semibold)
+                                } else {
+                                    Text(station.stationName)
+                                        .font(.title)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                            
+                            Divider()
+                            
+                            infoRow(icon: "flag", label: "Country", text: $station.country)
+                            infoRow(icon: "map", label: "County", text: $station.county)
+                            infoRow(icon: "building.2", label: "Operator", text: $station.toc)
+                        }
+                        .padding()
+                    }
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
+                    
+                    // Coordinates Section
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Coordinates")
                                 .font(.headline)
                                 .foregroundColor(.blue)
-
-                            ForEach(station.usageData.keys.sorted(by: >), id: \.self) { year in
-                                HStack {
-                                    Text("\(year):")
-                                        .font(.body)
-                                        .fontWeight(.bold)
+                            
+                            fullWidthCoordinateRow(icon: "mappin.and.ellipse", label: "Latitude", value: $station.latitude)
+                            fullWidthCoordinateRow(icon: "location.north.line", label: "Longitude", value: $station.longitude)
+                        }
+                        .padding()
+                    }
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
+                    
+                    // Visit Status Section
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Visited Status")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                                Spacer()
+                                Button(action: toggleFavorite) {
+                                    Image(systemName: station.isFavorite ? "star.fill" : "star")
+                                        .foregroundColor(.yellow)
+                                        .font(.system(size: 24))
+                                }
+                            }
+                            
+                            Toggle(isOn: $station.visited) {
+                                Text("Visited")
+                                    .font(.body)
+                            }
+                            .onChange(of: station.visited) {
+                                if !station.visited {
+                                    station.visitDate = nil
+                                }
+                            }
+                            if station.visited {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Visit Date")
+                                        .font(.headline)
                                         .foregroundColor(.blue)
-                                    Spacer()
-                                    if isEditing {
-                                        styledTextField(
-                                            "Usage",
-                                            text: Binding<String>(
-                                                get: { station.usageData[year] ?? "N/A" },
-                                                set: { station.usageData[year] = $0 }
-                                            )
+                                    HStack {
+                                        Image(systemName: "calendar")
+                                            .foregroundColor(.blue)
+                                        DatePicker(
+                                            "",
+                                            selection: Binding<Date>(
+                                                get: { station.visitDate ?? Date() },
+                                                set: { station.visitDate = $0 }
+                                            ),
+                                            displayedComponents: [.date]
                                         )
-                                        .font(.body)
-                                        .multilineTextAlignment(.leading)
-                                    } else {
-                                        Text(station.usageData[year] ?? "N/A")
-                                            .font(.body)
-                                            .foregroundColor(.primary)
-                                            .multilineTextAlignment(.leading) // Ensure left alignment
+                                        .labelsHidden()
                                     }
                                 }
-                                .padding(.vertical, 2)
                             }
                         }
                         .padding()
@@ -146,21 +147,57 @@ struct UKNatRailDetailView: View {
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
                     .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
+                    
+                    // Usage Data Section
+                    if !station.usageData.isEmpty {
+                        Section {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Usage Data")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                                
+                                ForEach(station.usageData.keys.sorted(by: >), id: \.self) { year in
+                                    HStack {
+                                        Text("\(year):")
+                                            .font(.body)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.blue)
+                                        Spacer()
+                                        if isEditing {
+                                            styledTextField(
+                                                "Usage",
+                                                text: Binding<String>(
+                                                    get: { station.usageData[year] ?? "N/A" },
+                                                    set: { station.usageData[year] = $0 }
+                                                )
+                                            )
+                                            .font(.body)
+                                            .multilineTextAlignment(.leading)
+                                        } else {
+                                            Text(station.usageData[year] ?? "N/A")
+                                                .font(.body)
+                                                .foregroundColor(.primary)
+                                                .multilineTextAlignment(.leading) // Ensure left alignment
+                                        }
+                                    }
+                                    .padding(.vertical, 2)
+                                }
+                            }
+                            .padding()
+                        }
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
+                    }
                 }
-            }
-            .padding()
-        }
-        .navigationTitle("Station Details")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: toggleEditing) {
-                    Text(isEditing ? "Done" : "Edit").bold()
-                }
+                .padding()
             }
         }
         .onDisappear {
             onUpdate(station)
         }
+        .navigationBarHidden(true) // Hide the default navigation bar
+        .toolbar(.hidden)
     }
 
     private func toggleFavorite() {

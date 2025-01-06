@@ -77,6 +77,7 @@ struct UKNatRailDetailView: View {
                         }
                         .padding()
                     }
+                    .frame(maxWidth: .infinity) // Adaptive for iPads
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
                     .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
@@ -93,6 +94,7 @@ struct UKNatRailDetailView: View {
                         }
                         .padding()
                     }
+                    .frame(maxWidth: .infinity) // Adaptive for iPads
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
                     .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
@@ -144,6 +146,7 @@ struct UKNatRailDetailView: View {
                         }
                         .padding()
                     }
+                    .frame(maxWidth: .infinity) // Adaptive for iPads
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
                     .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
@@ -185,6 +188,7 @@ struct UKNatRailDetailView: View {
                             }
                             .padding()
                         }
+                        .frame(maxWidth: .infinity) // Adaptive for iPads
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                         .shadow(color: .gray.opacity(0.2), radius: 4, x: 0, y: 2)
@@ -196,7 +200,7 @@ struct UKNatRailDetailView: View {
         .onDisappear {
             onUpdate(station)
         }
-        .navigationBarHidden(true) // Hide the default navigation bar
+        .toolbar(.hidden, for: .navigationBar) // Hide the default navigation bar
         .toolbar(.hidden)
     }
 

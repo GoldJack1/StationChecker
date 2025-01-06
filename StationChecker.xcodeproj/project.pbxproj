@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		740D97832D21E9E800AA1648 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 740D97822D21E9E800AA1648 /* WidgetKit.framework */; };
 		740D97852D21E9E800AA1648 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 740D97842D21E9E800AA1648 /* SwiftUI.framework */; };
-		740D97962D21E9E900AA1648 /* StatisticsWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 740D97812D21E9E800AA1648 /* StatisticsWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		740D97962D21E9E900AA1648 /* StatisticsWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 740D97812D21E9E800AA1648 /* StatisticsWidgetExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7440E4852D2094800040E6A9 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7440E4842D2094750040E6A9 /* MapKit.framework */; };
 		7452B3472D24139D008D0D74 /* SwiftCSV in Frameworks */ = {isa = PBXBuildFile; productRef = 7452B3462D24139D008D0D74 /* SwiftCSV */; };
 /* End PBXBuildFile section */
@@ -397,6 +397,7 @@
 /* Begin PBXTargetDependency section */
 		740D97952D21E9E900AA1648 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 740D97802D21E9E800AA1648 /* StatisticsWidgetExtension */;
 			targetProxy = 740D97942D21E9E900AA1648 /* PBXContainerItemProxy */;
 		};
@@ -631,13 +632,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = jw.StationChecker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -673,13 +674,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = jw.StationChecker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = NO;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};

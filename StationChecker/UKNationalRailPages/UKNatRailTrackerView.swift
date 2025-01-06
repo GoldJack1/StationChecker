@@ -3,6 +3,7 @@ import WidgetKit
 
 struct UKNatRailTrackerView: View {
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var stations: [UKNatRailRecord] = []
     @State private var filteredUKNatRails: [UKNatRailRecord] = []
     @State private var searchQuery: String = ""
@@ -11,7 +12,7 @@ struct UKNatRailTrackerView: View {
     @State private var showFilterSheet: Bool = false
     @State private var showStatisticsView: Bool = false
     @State private var showDataOptionsSheet: Bool = false
-    @State private var selectedDataType: DataType? = nil
+    @State private var selectedDataType: DataType? = nil // Added selectedDataType here
     @State private var errorMessage: String? = nil
     @State private var debounceWorkItem: DispatchWorkItem?
 
@@ -24,140 +25,32 @@ struct UKNatRailTrackerView: View {
     @State private var showOnlyFavorites: Bool = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Custom Header
+        NavigationView {
             VStack(spacing: 0) {
-                // First Row: Back Button and Page Title
-                HStack {
-                    // Back Button
-                    Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-
-                    Spacer()
-
-                    // Page Title
-                    Text("GB National Rail")
-                        .font(.title)
-                        .bold()
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                // Custom Header
+                VStack(spacing: 0) {
+                    headerContent
+                    searchAndButtonRow
                 }
-                .padding(.horizontal)
-                .padding(.top, 10)
-                .padding(.bottom, 5)
-                .background(Color(.systemGray6))
-                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
 
-                // Second Row: Search Bar and Buttons
-                HStack {
-                    // Search Bar
-                    TextField("Search Stations", text: $searchQuery)
-                        .padding(10)
-                        .background(Color(.systemGray5))
-                        .cornerRadius(25)
-                        .onChange(of: searchQuery) { oldValue, newValue in
-                            debounceFilter()
-                        }
-
-                    // Add Station Button
-                    Button(action: { showAddStationForm = true }) {
-                        Image(systemName: "plus")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-
-                    // Statistics Button
-                    Button(action: { showStatisticsView = true }) {
-                        Image(systemName: "chart.bar")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-
-                    // Filter Button
-                    Button(action: { showFilterSheet = true }) {
-                        Image(systemName: "line.horizontal.3.decrease.circle")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-
-                    // Import/Export Button
-                    Button(action: { showDataOptionsSheet = true }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 10)
-                .background(Color(.systemGray6))
-            }
-
-            // Content
-            if let errorMessage = errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .padding()
-            } else if filteredUKNatRails.isEmpty {
-                VStack {
-                    Spacer()
-                    Text("No stations to display.\nImport a CSV file to get started.")
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
+                // Content
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
                         .padding()
-                    Spacer()
+                } else if filteredUKNatRails.isEmpty {
+                    emptyStateView
+                } else {
+                    stationListView
                 }
-            } else {
-                List {
-                    ForEach($filteredUKNatRails, id: \.id) { $station in
-                        ZStack {
-                            NavigationLink(
-                                destination: UKNatRailDetailView(
-                                    station: $station,
-                                    onUpdate: { updatedUKNatRail in
-                                        updateUKNatRail(updatedUKNatRail)
-                                    }
-                                )
-                            ) {
-                                EmptyView()
-                            }
-                            .opacity(0)
-
-                            UKNatRailCard(
-                                station: $station,
-                                onUpdate: { updatedUKNatRail in
-                                    updateUKNatRail(updatedUKNatRail)
-                                },
-                                onNavigate: { /* Add custom navigation actions if needed */ }
-                            )
-                        }
-                    }
-                    .onDelete { indices in
-                        deleteUKNatRail(at: indices)
-                    }
-                }
-                .listStyle(PlainListStyle())
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationBarHidden(true) // Completely hide navigation bar
+            .onAppear {
+                loadUKNatRails()
             }
         }
-        .navigationBarHidden(true) // Ensure the default navigation bar is hidden
-        .toolbar(.hidden) // Ensures toolbar doesn't appear
-        .onAppear {
-            loadUKNatRails()
-        }
+        .navigationViewStyle(StackNavigationViewStyle()) // Unified navigation behavior
         .sheet(isPresented: $showAddStationForm) {
             AddStationForm(onAddStation: { newStation in
                 addUKNatRail(newStation)
@@ -208,6 +101,152 @@ struct UKNatRailTrackerView: View {
         }
     }
 
+    // MARK: - Header Content
+    private var headerContent: some View {
+        HStack {
+            Button(action: {
+                presentationMode.wrappedValue.dismiss()
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.title3)
+                    .padding(10)
+                    .background(Circle().fill(Color(.systemGray5)))
+                    .foregroundColor(.primary)
+            }
+            Spacer()
+            Text("GB National Rail")
+                .font(.title)
+                .bold()
+                .foregroundColor(.primary)
+            Spacer()
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+
+    // MARK: - Search and Buttons Row
+    private var searchAndButtonRow: some View {
+        HStack {
+            TextField("Search Stations", text: $searchQuery)
+                .padding(10)
+                .background(Color(.systemGray5))
+                .cornerRadius(25)
+                .onChange(of: searchQuery) { _, _ in
+                    debounceFilter()
+                }
+
+            Button(action: { showAddStationForm = true }) {
+                Image(systemName: "plus")
+                    .font(.title3)
+                    .padding(10)
+                    .background(Circle().fill(Color(.systemGray5)))
+                    .foregroundColor(.primary)
+            }
+
+            Button(action: { showStatisticsView = true }) {
+                Image(systemName: "chart.bar")
+                    .font(.title3)
+                    .padding(10)
+                    .background(Circle().fill(Color(.systemGray5)))
+                    .foregroundColor(.primary)
+            }
+
+            Button(action: { showFilterSheet = true }) {
+                Image(systemName: "line.horizontal.3.decrease.circle")
+                    .font(.title3)
+                    .padding(10)
+                    .background(Circle().fill(Color(.systemGray5)))
+                    .foregroundColor(.primary)
+            }
+
+            Button(action: { showDataOptionsSheet = true }) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.title3)
+                    .padding(10)
+                    .background(Circle().fill(Color(.systemGray5)))
+                    .foregroundColor(.primary)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+    }
+
+    // MARK: - Empty State View
+    private var emptyStateView: some View {
+        VStack {
+            Spacer()
+            Text("No stations to display.\nImport a CSV file to get started.")
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding()
+            Spacer()
+        }
+    }
+
+    // MARK: - Station List View
+    private var stationListView: some View {
+        Group {
+            if horizontalSizeClass == .compact {
+                // iPhone List View
+                List {
+                    ForEach($filteredUKNatRails, id: \.id) { $station in
+                        NavigationLink(
+                            destination: UKNatRailDetailView(
+                                station: $station,
+                                onUpdate: { updatedUKNatRail in
+                                    updateUKNatRail(updatedUKNatRail)
+                                }
+                            )
+                        ) {
+                            UKNatRailCard(
+                                station: $station,
+                                onUpdate: { updatedUKNatRail in
+                                    updateUKNatRail(updatedUKNatRail)
+                                },
+                                onNavigate: { presentationMode.wrappedValue.dismiss() } // Fixed onNavigate
+                            )
+                        }
+                    }
+                    .onDelete { indices in
+                        deleteUKNatRail(at: indices)
+                    }
+                }
+                .listStyle(PlainListStyle())
+            } else {
+                // iPad Grid View
+                ScrollView {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 300), spacing: 20)],
+                        spacing: 20
+                    ) {
+                        ForEach($filteredUKNatRails, id: \.id) { $station in
+                            NavigationLink(
+                                destination: UKNatRailDetailView(
+                                    station: $station,
+                                    onUpdate: { updatedUKNatRail in
+                                        updateUKNatRail(updatedUKNatRail)
+                                    }
+                                )
+                            ) {
+                                UKNatRailCard(
+                                    station: $station,
+                                    onUpdate: { updatedUKNatRail in
+                                        updateUKNatRail(updatedUKNatRail)
+                                    },
+                                    onNavigate: { presentationMode.wrappedValue.dismiss() } // Fixed onNavigate
+                                )
+                                .frame(height: 150)
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+    }
+    
     // MARK: - Helper Methods
 
     private func filterUKNatRails() {
@@ -227,49 +266,40 @@ struct UKNatRailTrackerView: View {
             return true
         }
     }
-    
+
     private func addUKNatRail(_ newStation: UKNatRailRecord) {
         stations.append(newStation)
         DataManager.shared.saveStationsToDisk(stations)
         DataManager.shared.saveStatisticsToSharedContainer(stations: stations)
         filterUKNatRails()
-        print("[UKNatRailTrackerView] Added station: \(newStation.stationName). Total: \(stations.count).")
     }
-    
+
     private func updateUKNatRail(_ updatedUKNatRail: UKNatRailRecord) {
         if let index = stations.firstIndex(where: { $0.id == updatedUKNatRail.id }) {
             stations[index] = updatedUKNatRail
-            DataManager.shared.saveStationsToDisk(stations) // Save updated stations to disk
-            DataManager.shared.saveStatisticsToSharedContainer(stations: stations) // Update widget statistics
-            print("[UKNatRailTrackerView] Updated station: \(updatedUKNatRail.stationName). Visit status: \(updatedUKNatRail.visited).")
+            DataManager.shared.saveStationsToDisk(stations)
+            DataManager.shared.saveStatisticsToSharedContainer(stations: stations)
         }
     }
-    
+
     private func deleteUKNatRail(at offsets: IndexSet) {
         stations.remove(atOffsets: offsets)
         DataManager.shared.saveStationsToDisk(stations)
         DataManager.shared.saveStatisticsToSharedContainer(stations: stations)
         filterUKNatRails()
-        print("[UKNatRailTrackerView] Deleted station(s). Total: \(stations.count).")
     }
-    
-    private func debounceFilter() {
-        // Cancel any existing debounce operation
-        debounceWorkItem?.cancel()
 
-        // Create a new debounce operation
+    private func debounceFilter() {
+        debounceWorkItem?.cancel()
         let workItem = DispatchWorkItem {
             filterUKNatRails()
         }
-
-        // Store the work item and execute it after a delay
         debounceWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
     }
-    
+
     private func exportCSV(for dataType: DataType) {
         if let exportedFileURL = DataManager.shared.exportStationsToCSV(stations: stations, for: dataType) {
-            // Present the exported file using a UIActivityViewController
             if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let rootViewController = scene.windows.first?.rootViewController {
                 let activityVC = UIActivityViewController(activityItems: [exportedFileURL], applicationActivities: nil)
@@ -279,19 +309,17 @@ struct UKNatRailTrackerView: View {
             errorMessage = "Failed to export \(dataType.displayName) CSV."
         }
     }
-    
+
     private func handleFilePicker(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let fileURL = urls.first else { return }
             guard fileURL.startAccessingSecurityScopedResource() else { return }
             defer { fileURL.stopAccessingSecurityScopedResource() }
-            
             let importedStations = DataManager.shared.parseCSV(from: fileURL, for: .nationalRail)
             if !importedStations.isEmpty {
                 stations.append(contentsOf: importedStations)
                 DataManager.shared.saveStationsToDisk(stations)
-                print("[UKNatRailTrackerView] Imported \(importedStations.count) stations.")
                 filterUKNatRails()
                 saveStatisticsToSharedContainer()
             }
@@ -299,31 +327,28 @@ struct UKNatRailTrackerView: View {
             print("[UKNatRailTrackerView] File picker error: \(error.localizedDescription)")
         }
     }
-    
+
     private func loadUKNatRails() {
         stations = DataManager.shared.loadStationsFromDisk()
-        print("[UKNatRailTrackerView] Loaded \(stations.count) stations.")
         filterUKNatRails()
     }
-    
+
     private func saveStatisticsToSharedContainer() {
         guard let sharedDefaults = UserDefaults(suiteName: "group.com.gbr.statistics") else {
             print("[UKNatRailTrackerView] Shared defaults not found.")
             return
         }
-        
+
         let totalStations = stations.count
         let visitedStations = stations.filter { $0.visited }.count
         let notVisitedStations = totalStations - visitedStations
         let percentageVisited = totalStations > 0 ? (Double(visitedStations) / Double(totalStations)) * 100 : 0.0
-        
+
         sharedDefaults.set(totalStations, forKey: "totalStations")
         sharedDefaults.set(visitedStations, forKey: "visitedStations")
         sharedDefaults.set(notVisitedStations, forKey: "notVisitedStations")
         sharedDefaults.set(percentageVisited, forKey: "percentageVisited")
-        
-        // Notify widget to reload its timeline
+
         WidgetCenter.shared.reloadAllTimelines()
-        print("[UKNatRailTrackerView] Statistics saved and widget timeline reloaded.")
     }
 }

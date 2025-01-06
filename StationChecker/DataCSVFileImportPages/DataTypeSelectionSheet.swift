@@ -15,6 +15,7 @@ struct DataTypeSelectionSheet: View {
                     }) {
                         Text(dataType.displayName)
                             .font(.headline)
+                            .foregroundColor(.primary)
                     }
                 }
             }

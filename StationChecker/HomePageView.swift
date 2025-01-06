@@ -52,6 +52,8 @@ struct HomePageView: View {
                 .padding(.top, 20)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("") // Empty navigation title to hide default behavior
+            .navigationBarHidden(true) // Completely hides the navigation bar
         }
     }
 }
@@ -116,6 +118,11 @@ struct PlaceholderView: View {
 
 struct HomePageView_Previews: PreviewProvider {
     static var previews: some View {
-        HomePageView()
+        Group {
+            HomePageView()
+                .previewDevice("iPhone 14")
+            HomePageView()
+                .previewDevice("iPad Pro (12.9-inch) (6th generation)")
+        }
     }
 }

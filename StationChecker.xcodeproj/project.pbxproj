@@ -165,12 +165,12 @@
 		74B06D512D1AD96B007C55D6 = {
 			isa = PBXGroup;
 			children = (
-				74B06D5C2D1AD96C007C55D6 /* StationChecker */,
 				74B06D6D2D1AD96D007C55D6 /* StationCheckerTests */,
 				74B06D772D1AD96D007C55D6 /* StationCheckerUITests */,
 				740D97862D21E9E800AA1648 /* StatisticsWidget */,
 				7440E4822D2094750040E6A9 /* Frameworks */,
 				74B06D5B2D1AD96C007C55D6 /* Products */,
+				74B06D5C2D1AD96C007C55D6 /* StationChecker */,
 			);
 			sourceTree = "<group>";
 		};

@@ -49,6 +49,14 @@ struct HomePageView: View {
                                 pngName: "manbeenet",
                                 destination: PlaceholderView(title: "Manchester Metrolink Tracker")
                             )
+
+                            // New Button for Ticket Tracker
+                            TrackerCard(
+                                title: "Ticket Tracker",
+                                subtitle: "Manage ticket data independently.",
+                                pngName: "ticket",
+                                destination: TicketTrackerView()
+                            )
                         }
                         .padding(.horizontal)
                     } else {
@@ -82,6 +90,14 @@ struct HomePageView: View {
                                 subtitle: "Coming soon.",
                                 pngName: "manbeenet",
                                 destination: PlaceholderView(title: "Manchester Metrolink Tracker")
+                            )
+
+                            // New Button for Ticket Tracker
+                            TrackerCard(
+                                title: "Ticket Tracker",
+                                subtitle: "Manage ticket data independently.",
+                                pngName: "ticket",
+                                destination: TicketTrackerView()
                             )
                         }
                         .padding()

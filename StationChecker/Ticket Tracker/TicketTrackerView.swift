@@ -1,168 +1,140 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TicketTrackerView: View {
-    @State private var tickets: [TicketRecord] = TicketDataManager.shared.loadTickets()
-    @State private var filteredTickets: [TicketRecord] = []
-    @State private var searchQuery: String = ""
-    @State private var showFilePicker = false
+    @State private var tickets: [TicketRecord] = []
+    @State private var showImporter = false
     @State private var showAddTicketForm = false
-    @State private var showStatisticsView = false
-    @State private var showDataOptionsSheet = false
-    @State private var errorMessage: String? = nil
-
-    // Add a filter for delayRepay (used as an example of visited tickets)
-    @State private var showOnlyVisited: Bool = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header with Search Bar and Buttons
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Ticket Tracker")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    Spacer()
-                    Button(action: { showAddTicketForm = true }) {
-                        Image(systemName: "plus")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-                    Button(action: { showStatisticsView = true }) {
-                        Image(systemName: "chart.bar")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-                    Button(action: { showDataOptionsSheet = true }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .padding(10)
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 10)
-                .padding(.bottom, 5)
-                .background(Color(.systemGray6))
-                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-            }
-
-            // Content with Tickets List and Filter
+        NavigationView {
             VStack {
-                // Search Bar
-                TextField("Search Tickets", text: $searchQuery)
-                    .padding(10)
-                    .background(Color(.systemGray5))
-                    .cornerRadius(25)
-                    .onChange(of: searchQuery) { oldValue, newValue in
-                        filterTickets()
-                    }
-                    .padding(.horizontal)
-
-                // Filter Buttons
-                HStack {
-                    Toggle("Show Visited Tickets", isOn: $showOnlyVisited)
-                        .onChange(of: showOnlyVisited) { _ in filterTickets() }
-                }
-                .padding(.horizontal)
-
-                // Filtered List
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
-                } else if filteredTickets.isEmpty {
-                    Text("No tickets to display.\nImport a CSV file to get started.")
+                if tickets.isEmpty {
+                    Text("No tickets available. Import, add, or create a new ticket.")
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
                         .padding()
                 } else {
-                    List(filteredTickets) { ticket in
-                        TicketCard(ticket: ticket)
+                    List {
+                        ForEach(tickets) { ticket in
+                            NavigationLink(destination: TicketDetailView(ticket: ticket)) {
+                                TicketCard(ticket: ticket)
+                            }
+                        }
+                        .onDelete(perform: deleteTickets)
                     }
                     .listStyle(PlainListStyle())
                 }
-            }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            // Optional: Load or refresh ticket data
-            filterTickets()
-        }
-        .sheet(isPresented: $showAddTicketForm) {
-            TicketAddForm(onAddTicket: { newTicket in
-                tickets.append(newTicket)
-                TicketDataManager.shared.saveTicketsToDisk(tickets)
-            })
-        }
-        .sheet(isPresented: $showStatisticsView) {
-            TicketStatisticsView(tickets: tickets)
-        }
-        .sheet(isPresented: $showDataOptionsSheet) {
-            TicketDataOptionsSheet(
-                onImport: { dataType in
-                    showFilePicker = true
-                },
-                onExport: { dataType in
-                    // Implement export functionality here
-                },
-                onClearData: {
-                    tickets.removeAll()
-                    TicketDataManager.shared.saveTicketsToDisk(tickets)
-                },
-                onAddTicket: {
-                    showAddTicketForm = true
+
+                HStack {
+                    Button("Import CSV") {
+                        showImporter = true
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Export CSV") {
+                        exportCSV()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Clear All") {
+                        clearAllTickets()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.red)
                 }
-            )
-        }
-        .fileImporter(
-            isPresented: $showFilePicker,
-            allowedContentTypes: [.commaSeparatedText],
-            allowsMultipleSelection: false
-        ) { result in
-            handleFileImport(result: result)
+                .padding()
+            }
+            .navigationTitle("Ticket Tracker")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showAddTicketForm = true }) {
+                        Label("Add Ticket", systemImage: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddTicketForm) {
+                TicketFormView { newTicket in
+                    tickets.append(newTicket)
+                    saveTicketsToDisk()
+                }
+            }
+            .onAppear(perform: loadTicketsFromDisk)
+            .fileImporter(
+                isPresented: $showImporter,
+                allowedContentTypes: [.commaSeparatedText],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFilePicker(result: result)
+            }
         }
     }
 
-    private func filterTickets() {
-        filteredTickets = tickets.filter { ticket in
-            var isValid = true
-
-            // Apply search query filtering
-            if !searchQuery.isEmpty {
-                isValid = isValid && (ticket.origin.localizedCaseInsensitiveContains(searchQuery) ||
-                                      ticket.destination.localizedCaseInsensitiveContains(searchQuery) ||
-                                      ticket.ticketType.localizedCaseInsensitiveContains(searchQuery))
-            }
-
-            // Apply 'Visited' filter: Show tickets with non-zero delayRepay (as an example)
-            if showOnlyVisited {
-                isValid = isValid && ticket.delayRepay != "£0.00"
-            }
-
-            return isValid
-        }
-    }
-
-    private func handleFileImport(result: Result<[URL], Error>) {
+    private func handleFilePicker(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let fileURL = urls.first else { return }
             guard fileURL.startAccessingSecurityScopedResource() else { return }
             defer { fileURL.stopAccessingSecurityScopedResource() }
 
-            let importedTickets = TicketDataManager.shared.importTickets(from: fileURL)
+            let importedTickets = TicketDataManager.shared.parseTickets(from: fileURL)
             if !importedTickets.isEmpty {
                 tickets.append(contentsOf: importedTickets)
-                TicketDataManager.shared.saveTicketsToDisk(tickets)
-                filterTickets()
+                saveTicketsToDisk()
+                print("[TicketTrackerView] Imported \(importedTickets.count) tickets.")
             }
         case .failure(let error):
-            print("[TicketTrackerView] File import failed: \(error.localizedDescription)")
+            print("[TicketTrackerView] File picker error: \(error.localizedDescription)")
         }
+    }
+
+    private func exportCSV() {
+        let csvContent = TicketDataManager.shared.exportTicketsToCSV(tickets: tickets)
+
+        // Create a temporary file to hold the CSV content
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let fileURL = tempDirectory.appendingPathComponent("tickets.csv")
+
+        do {
+            try csvContent.write(to: fileURL, atomically: true, encoding: .utf8)
+
+            // Use a coordinator to present the document picker
+            let coordinator = DocumentPickerCoordinator()
+            let picker = UIDocumentPickerViewController(forExporting: [fileURL], asCopy: true)
+            picker.delegate = coordinator
+            picker.allowsMultipleSelection = false
+
+            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootController = scene.windows.first?.rootViewController {
+                rootController.present(picker, animated: true)
+            }
+        } catch {
+            print("Error writing CSV file: \(error.localizedDescription)")
+        }
+    }
+
+    private func saveTicketsToDisk() {
+        TicketDataManager.shared.saveTicketsToDisk(tickets)
+    }
+
+    private func loadTicketsFromDisk() {
+        tickets = TicketDataManager.shared.loadTicketsFromDisk()
+    }
+
+    private func deleteTickets(at offsets: IndexSet) {
+        tickets.remove(atOffsets: offsets)
+        saveTicketsToDisk()
+    }
+
+    private func clearAllTickets() {
+        tickets.removeAll()
+        saveTicketsToDisk()
+    }
+}
+
+class DocumentPickerCoordinator: NSObject, UIDocumentPickerDelegate {
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let savedURL = urls.first else { return }
+        print("File successfully saved to: \(savedURL)")
     }
 }

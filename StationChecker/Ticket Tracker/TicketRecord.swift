@@ -1,41 +1,50 @@
 import Foundation
 
-struct TicketRecord: Identifiable, Codable, Hashable {
-    let id: UUID
-    var origin: String
-    var destination: String
-    var rangerRover: String?
-    var ticketType: String
-    var travelClass: String
-    var price: String
-    var delayRepay: String
-    var outboundDate: String?
-    var returnDate: String?
-    var delayMins: String? // New optional field for delay minutes
-    
+struct TicketRecord: Identifiable, Codable {
+    var id: UUID = UUID()
+    let origin: String
+    let destination: String
+    let price: String
+    let ticketType: String
+    let classType: String
+    let toc: String? // Optional TOC
+    let outboundDate: String
+    let returnDate: String
+    let wasDelayed: String
+    let delayDuration: String
+    let compensation: String
+    let loyaltyProgram: String
+    let rewardValue: String
+
     init(
         id: UUID = UUID(),
         origin: String,
         destination: String,
-        rangerRover: String? = nil,
-        ticketType: String,
-        travelClass: String,
         price: String,
-        delayRepay: String,
-        outboundDate: String? = nil,
-        returnDate: String? = nil,
-        delayMins: String? = nil // Include in initializer
+        ticketType: String,
+        classType: String = "Standard",  // Default value
+        toc: String? = nil,  // Optional TOC
+        outboundDate: String,
+        returnDate: String,
+        wasDelayed: String,
+        delayDuration: String,
+        compensation: String,
+        loyaltyProgram: String = "",  // Default value
+        rewardValue: String = ""  // Default value
     ) {
         self.id = id
         self.origin = origin
         self.destination = destination
-        self.rangerRover = rangerRover
-        self.ticketType = ticketType
-        self.travelClass = travelClass
         self.price = price
-        self.delayRepay = delayRepay
+        self.ticketType = ticketType
+        self.classType = classType
+        self.toc = toc
         self.outboundDate = outboundDate
         self.returnDate = returnDate
-        self.delayMins = delayMins
+        self.wasDelayed = wasDelayed
+        self.delayDuration = delayDuration
+        self.compensation = compensation
+        self.loyaltyProgram = loyaltyProgram
+        self.rewardValue = rewardValue
     }
 }

@@ -2,122 +2,94 @@ import Foundation
 
 class TicketDataManager {
     static let shared = TicketDataManager()
-    
+
     private init() {}
-    
-    // MARK: - Import Tickets
-    func importTickets(from fileURL: URL) -> [TicketRecord] {
-        var ticketRecords: [TicketRecord] = []
-        
+
+    // MARK: - Save Tickets to Disk
+    func saveTicketsToDisk(_ tickets: [TicketRecord]) {
         do {
-            // Read the file contents
+            let fileURL = getFileURL()
+            let data = try JSONEncoder().encode(tickets)
+            try data.write(to: fileURL, options: [.atomic])
+            print("[TicketDataManager] Tickets successfully saved to: \(fileURL)")
+        } catch {
+            print("[TicketDataManager] Error saving tickets to disk: \(error)")
+        }
+    }
+
+    // MARK: - Load Tickets from Disk
+    func loadTicketsFromDisk() -> [TicketRecord] {
+        do {
+            let fileURL = getFileURL()
+            let data = try Data(contentsOf: fileURL)
+            let tickets = try JSONDecoder().decode([TicketRecord].self, from: data)
+            print("[TicketDataManager] Loaded \(tickets.count) tickets from disk.")
+            return tickets
+        } catch {
+            print("[TicketDataManager] Error loading tickets from disk: \(error)")
+            return []
+        }
+    }
+
+    // MARK: - Helper to Get File URL
+    private func getFileURL() -> URL {
+        let documentDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return documentDirectory.appendingPathComponent("tickets.json")
+    }
+
+    // MARK: - CSV Parsing
+    func parseTickets(from fileURL: URL) -> [TicketRecord] {
+        var tickets: [TicketRecord] = []
+
+        do {
             let csvContent = try String(contentsOf: fileURL, encoding: .utf8)
             let rows = csvContent.components(separatedBy: "\n")
             guard let headerRow = rows.first else {
-                print("[TicketDataManager] CSV file is empty.")
+                print("CSV file is empty.")
                 return []
             }
-            
-            let headers = parseCSVRow(row: headerRow, delimiter: ",")
+
+            let headers = headerRow.components(separatedBy: ",")
             let rowsWithoutHeader = rows.dropFirst()
-            
-            // Determine column indices dynamically
-            let originIndex = headers.firstIndex(of: "Ticket Origin") ?? 0
-            let destinationIndex = headers.firstIndex(of: "Ticket Destination") ?? 1
-            let rangerRoverIndex = headers.firstIndex(of: "Ranger/Rover (If Applicable)")
-            let ticketTypeIndex = headers.firstIndex(of: "Ticket Type") ?? 2
-            let travelClassIndex = headers.firstIndex(of: "Class") ?? 3
-            let priceIndex = headers.firstIndex(of: "Price") ?? 4
-            let outboundDateIndex = headers.firstIndex(of: "Outbound Date")
-            let returnDateIndex = headers.firstIndex(of: "Return Date")
-            let delayRepayIndex = headers.firstIndex(of: "Delay Repay")
-            let delayMinsIndex = headers.firstIndex(of: "Delay Mins")
-            
+
             for row in rowsWithoutHeader {
                 let columns = parseCSVRow(row: row, delimiter: ",")
-                guard columns.count >= headers.count else {
-                    print("[TicketDataManager] Skipping misaligned row: \(row)")
-                    continue
-                }
-                
-                // Parse fields
-                let origin = columns[optional: originIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
-                let destination = columns[optional: destinationIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
-                let rangerRover = rangerRoverIndex != nil
-                ? columns[optional: rangerRoverIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-                let ticketType = columns[optional: ticketTypeIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
-                let travelClass = columns[optional: travelClassIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "Unknown"
-                let price = columns[optional: priceIndex]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "£0.00"
-                let outboundDate = outboundDateIndex != nil
-                ? columns[optional: outboundDateIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-                let returnDate = returnDateIndex != nil
-                ? columns[optional: returnDateIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-                let delayRepay = delayRepayIndex != nil
-                ? columns[optional: delayRepayIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "£0.00"
-                : "£0.00"
-                let delayMins = delayMinsIndex != nil
-                ? columns[optional: delayMinsIndex!]?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-                
-                // Create a TicketRecord object
+                guard columns.count >= headers.count else { continue }
+
+                // Parse loyalty programs
+                let loyaltyProgramString = columns[safe: headers.firstIndex(of: "Loyalty Program") ?? 9] ?? ""
+                _ = loyaltyProgramString.components(separatedBy: "; ")
+
                 let ticket = TicketRecord(
-                    origin: origin,
-                    destination: destination,
-                    rangerRover: rangerRover,
-                    ticketType: ticketType,
-                    travelClass: travelClass,
-                    price: price,
-                    delayRepay: delayRepay,
-                    outboundDate: outboundDate,
-                    returnDate: returnDate,
-                    delayMins: delayMins
+                    origin: columns[safe: headers.firstIndex(of: "Origin") ?? 0] ?? "",
+                    destination: columns[safe: headers.firstIndex(of: "Destination") ?? 1] ?? "",
+                    price: columns[safe: headers.firstIndex(of: "Price") ?? 2] ?? "",
+                    ticketType: columns[safe: headers.firstIndex(of: "Ticket Type") ?? 3] ?? "",
+                    classType: columns[safe: headers.firstIndex(of: "Class Type") ?? 4] ?? "Standard",
+                    toc: columns[safe: headers.firstIndex(of: "TOC") ?? 5],
+                    outboundDate: columns[safe: headers.firstIndex(of: "Outbound Date") ?? 6] ?? "",
+                    returnDate: columns[safe: headers.firstIndex(of: "Return Date") ?? 7] ?? "",
+                    wasDelayed: columns[safe: headers.firstIndex(of: "Was Delayed") ?? 8] ?? "",
+                    delayDuration: columns[safe: headers.firstIndex(of: "Delay Duration") ?? 9] ?? "",
+                    compensation: columns[safe: headers.firstIndex(of: "Compensation") ?? 10] ?? "",
+                    loyaltyProgram: columns[safe: headers.firstIndex(of: "Loyalty Program") ?? 11] ?? "",
+                    rewardValue: columns[safe: headers.firstIndex(of: "Reward Value") ?? 12] ?? ""
                 )
-                
-                ticketRecords.append(ticket)
+                tickets.append(ticket)
             }
         } catch {
-            print("[TicketDataManager] Error reading file: \(error)")
+            print("[TicketDataManager] Error parsing tickets: \(error)")
         }
-        
-        return ticketRecords
+
+        return tickets
     }
-    
-    // MARK: - Export Tickets
-    func exportTickets(_ tickets: [TicketRecord]) -> URL? {
-        let fileName = "Tickets.csv"
-        let tempDirectory = FileManager.default.temporaryDirectory
-        let fileURL = tempDirectory.appendingPathComponent(fileName)
-        
-        var csvText = """
-        "Ticket Origin","Ticket Destination","Ranger/Rover","Ticket Type","Class","Price","Outbound Date","Return Date","Delay Repay","Delay Mins"\n
-        """
-        
-        for ticket in tickets {
-            let row = """
-            "\(ticket.origin)","\(ticket.destination)","\(ticket.rangerRover ?? "")","\(ticket.ticketType)","\(ticket.travelClass)","\(ticket.price)","\(ticket.outboundDate ?? "")","\(ticket.returnDate ?? "")","\(ticket.delayRepay)","\(ticket.delayMins ?? "0")"\n
-            """
-            csvText += row
-        }
-        
-        do {
-            try csvText.write(to: fileURL, atomically: true, encoding: .utf8)
-            print("[TicketDataManager] Tickets successfully exported to: \(fileURL)")
-            return fileURL
-        } catch {
-            print("[TicketDataManager] Failed to export tickets: \(error)")
-            return nil
-        }
-    }
-    
-    // MARK: - Helper Methods
+
+    // Helper Function for Parsing CSV Rows
     private func parseCSVRow(row: String, delimiter: String) -> [String] {
         var fields: [String] = []
         var currentField = ""
         var insideQuotes = false
-        
+
         for char in row {
             if char == "\"" {
                 insideQuotes.toggle()
@@ -128,44 +100,35 @@ class TicketDataManager {
                 currentField.append(char)
             }
         }
-        
         fields.append(currentField)
         return fields
     }
-    
-    // MARK: - Load Tickets
-    func loadTickets() -> [TicketRecord] {
-        let fileURL = getFileURL()
-        do {
-            let data = try Data(contentsOf: fileURL)
-            let tickets = try JSONDecoder().decode([TicketRecord].self, from: data)
-            return tickets
-        } catch {
-            print("[TicketDataManager] Failed to load tickets: \(error)")
-            return []
+    func exportTicketsToCSV(tickets: [TicketRecord]) -> String {
+        let header = "Origin,Destination,Price,Ticket Type,Class Type,TOC,Outbound Date,Return Date,Was Delayed,Delay Duration,Compensation,Loyalty Program,Reward Value"
+        let rows = tickets.map { ticket in
+            [
+                ticket.origin,
+                ticket.destination,
+                ticket.price,
+                ticket.ticketType,
+                ticket.classType,
+                ticket.toc ?? "", // Use empty string if TOC is nil
+                ticket.outboundDate,
+                ticket.returnDate,
+                ticket.wasDelayed,
+                ticket.delayDuration,
+                ticket.compensation,
+                ticket.loyaltyProgram,
+                ticket.rewardValue
+            ]
+            .map { field in
+                if field.contains(",") || field.contains("\n") || field.contains("\"") {
+                    return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
+                }
+                return field
+            }
+            .joined(separator: ",")
         }
-    }
-    
-    // MARK: - Save Tickets
-    func saveTicketsToDisk(_ tickets: [TicketRecord]) {
-        let fileURL = getFileURL()
-        do {
-            let data = try JSONEncoder().encode(tickets)
-            try data.write(to: fileURL)
-            print("[TicketDataManager] Tickets saved successfully to \(fileURL.path)")
-        } catch {
-            print("[TicketDataManager] Failed to save tickets: \(error)")
-        }
-    }
-    
-    private func getFileURL() -> URL {
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return documentsDirectory.appendingPathComponent("tickets.json")
-    }
-}
-// Renamed Subscript for Safe Array Access
-extension Array {
-    subscript(optional index: Int) -> Element? {
-        return indices.contains(index) ? self[index] : nil
+        return ([header] + rows).joined(separator: "\n")
     }
 }

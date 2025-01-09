@@ -16,9 +16,26 @@ struct TicketTrackerView: View {
                         .padding()
                 } else {
                     List {
-                        ForEach(tickets) { ticket in
-                            NavigationLink(destination: TicketDetailView(ticket: ticket)) {
-                                TicketCard(ticket: ticket)
+                        ForEach(tickets.indices, id: \.self) { index in
+                            NavigationLink(
+                                destination: TicketDetailView(
+                                    origin: tickets[index].origin,
+                                    destination: tickets[index].destination,
+                                    price: tickets[index].price,
+                                    ticketType: tickets[index].ticketType,
+                                    outboundDate: tickets[index].outboundDate,
+                                    returnDate: tickets[index].returnDate,
+                                    wasDelayed: tickets[index].wasDelayed,
+                                    delayDuration: tickets[index].delayDuration,
+                                    compensation: tickets[index].compensation,
+                                    loyaltyProgram: tickets[index].loyaltyProgram,
+                                    onSave: { updatedTicket in
+                                        tickets[index] = updatedTicket
+                                        saveTicketsToDisk()
+                                    }
+                                )
+                            ) {
+                                TicketCard(ticket: tickets[index])
                             }
                         }
                         .onDelete(perform: deleteTickets)

@@ -1,36 +1,46 @@
 import Foundation
 
-struct TicketRecord: Identifiable, Codable {
-    var id: UUID = UUID()
-    let origin: String
-    let destination: String
-    let price: String
-    let ticketType: String
-    let classType: String
-    let toc: String? // Optional TOC
-    let outboundDate: String
-    let returnDate: String
-    let wasDelayed: String
-    let delayDuration: String
-    let compensation: String
-    let loyaltyProgram: String
-    let rewardValue: String
+struct LoyaltyProgram: Codable, Equatable {
+    var virginPoints: String?
+    var lnerCashValue: String?
+    var clubAvantiJourneys: String?
+}
+
+struct TicketRecord: Identifiable, Codable, Equatable {
+    let id: UUID
+    var origin: String
+    var destination: String
+    var price: String
+    var ticketType: String
+    var classType: String
+    var toc: String?
+    var outboundDate: String
+    var outboundTime: String
+    var returnDate: String
+    var returnTime: String
+    var wasDelayed: Bool
+    var delayDuration: String
+    var pendingCompensation: Bool
+    var compensation: String
+    var loyaltyProgram: LoyaltyProgram?
 
     init(
         id: UUID = UUID(),
-        origin: String,
-        destination: String,
-        price: String,
-        ticketType: String,
-        classType: String = "Standard",  // Default value
-        toc: String? = nil,  // Optional TOC
-        outboundDate: String,
-        returnDate: String,
-        wasDelayed: String,
-        delayDuration: String,
-        compensation: String,
-        loyaltyProgram: String = "",  // Default value
-        rewardValue: String = ""  // Default value
+        origin: String = "Unknown",
+        destination: String = "Unknown",
+        price: String = "£0.00",
+        ticketType: String = "N/A",
+        classType: String = "Standard",
+        toc: String? = nil,
+        outboundDate: String = "Unknown",
+        outboundTime: String = "00:00",
+        returnDate: String = "",
+        returnTime: String = "00:00",
+        wasDelayed: Bool = false, // Correct default to a Bool value
+        delayDuration: String = "",
+        pendingCompensation: Bool = false,
+        compensation: String = "",
+        loyaltyProgram: LoyaltyProgram? = nil
     ) {
         self.id = id
         self.origin = origin
@@ -40,11 +50,13 @@ struct TicketRecord: Identifiable, Codable {
         self.classType = classType
         self.toc = toc
         self.outboundDate = outboundDate
+        self.outboundTime = outboundTime
         self.returnDate = returnDate
+        self.returnTime = returnTime
         self.wasDelayed = wasDelayed
         self.delayDuration = delayDuration
+        self.pendingCompensation = pendingCompensation
         self.compensation = compensation
         self.loyaltyProgram = loyaltyProgram
-        self.rewardValue = rewardValue
     }
 }

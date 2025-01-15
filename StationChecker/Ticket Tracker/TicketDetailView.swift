@@ -1,18 +1,11 @@
 import SwiftUI
 
 struct TicketDetailView: View {
-    @State private var isEditing: Bool = false
+    @Binding var ticket: TicketRecord
+    var onUpdate: (TicketRecord) -> Void
 
-    @State var origin: String
-    @State var destination: String
-    @State var price: String
-    @State var ticketType: String
-    @State var outboundDate: String
-    @State var returnDate: String
-    @State var wasDelayed: String
-    @State var delayDuration: String
-    @State var compensation: String
-    @State var loyaltyProgram: String
+    @State private var isEditing: Bool = false
+    @State private var localTicket: TicketRecord
 
     @State private var isVirginEnabled: Bool = false
     @State private var virginPoints: String = ""
@@ -21,69 +14,125 @@ struct TicketDetailView: View {
     @State private var isClubAvantiEnabled: Bool = false
     @State private var avantiJourneys: String = ""
 
-    var onSave: (TicketRecord) -> Void
+    init(ticket: Binding<TicketRecord>, onUpdate: @escaping (TicketRecord) -> Void) {
+        self._ticket = ticket
+        self.onUpdate = onUpdate
+        self._localTicket = State(initialValue: ticket.wrappedValue)
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Journey Details Section
-                DetailSection(title: "Journey Details", icon: "airplane.departure") {
+                journeyDetailsSection()
+                ticketDetailsSection()
+                compensationSection()
+                loyaltyProgramsSection()
+            }
+            .padding(.horizontal)
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(isEditing ? "Save" : "Edit") {
                     if isEditing {
-                        EditableField(label: "Origin", text: $origin)
-                        EditableField(label: "Destination", text: $destination)
-                    } else {
-                        DetailRow(label: "Origin", value: origin)
-                        DetailRow(label: "Destination", value: destination)
+                        saveChanges()
                     }
+                    isEditing.toggle()
                 }
+            }
+        }
+        .onAppear {
+            parseLoyaltyPrograms()
+        }
+    }
 
-                // Ticket Details Section
-                DetailSection(title: "Ticket Details", icon: "ticket") {
-                    if isEditing {
-                        EditableField(label: "Price (£)", text: $price)
-                        EditableField(label: "Ticket Type", text: $ticketType)
-                        EditableField(label: "Outbound Date (dd/MM/yyyy)", text: $outboundDate)
-                        if !returnDate.isEmpty {
-                            EditableField(label: "Return Date (dd/MM/yyyy)", text: $returnDate)
-                        }
-                    } else {
-                        DetailRow(label: "Price", value: price)
-                        DetailRow(label: "Type", value: ticketType)
-                        DetailRow(label: "Outbound Date", value: outboundDate)
-                        if !returnDate.isEmpty {
-                            DetailRow(label: "Return Date", value: returnDate)
-                        }
-                    }
+    private func journeyDetailsSection() -> some View {
+        FormSection(title: "Journey Details", icon: "train.side.front.car") {
+            if isEditing {
+                EditableField(label: "Origin", text: $localTicket.origin)
+                EditableField(label: "Destination", text: $localTicket.destination)
+            } else {
+                DetailRow(label: "Origin", value: localTicket.origin)
+                DetailRow(label: "Destination", value: localTicket.destination)
+            }
+        }
+    }
+
+    private func ticketDetailsSection() -> some View {
+        FormSection(title: "Ticket Details", icon: "ticket") {
+            if isEditing {
+                EditableField(label: "Price (£)", text: $localTicket.price)
+                EditableField(label: "Ticket Type", text: $localTicket.ticketType)
+                Picker("Class", selection: $localTicket.classType) {
+                    Text("Standard").tag("Standard")
+                    Text("First").tag("First")
                 }
-
-                // Delay Information Section (Non-editable)
-                DetailSection(title: "Delay Information", icon: "clock.arrow.circlepath") {
-                    DetailRow(label: "Was Delayed", value: wasDelayed, color: wasDelayed == "Yes" ? .red : .green)
-                    if wasDelayed == "Yes" {
-                        DetailRow(label: "Delayed by", value: "\(delayDuration) minutes")
-                    }
+                .pickerStyle(SegmentedPickerStyle())
+                EditableField(
+                    label: "TOC (Optional)",
+                    text: Binding(
+                        get: { localTicket.toc ?? "" },
+                        set: { localTicket.toc = $0.isEmpty ? nil : $0 }
+                    )
+                )
+                datePickersSection()
+            } else {
+                DetailRow(label: "Price", value: localTicket.price)
+                DetailRow(label: "Type", value: localTicket.ticketType)
+                DetailRow(label: "Class", value: localTicket.classType)
+                if let toc = localTicket.toc {
+                    DetailRow(label: "TOC", value: toc)
                 }
-
-                // Compensation Section
-                DetailSection(title: "Compensation", icon: "banknote") {
-                    if isEditing {
-                        EditableField(label: "Compensation (£)", text: $compensation)
-                    } else {
-                        if compensation == "Pending" {
-                            Text("Compensation: Pending")
-                                .foregroundColor(.orange)
-                        } else if !compensation.isEmpty {
-                            Text("Compensation Given: \(compensation.hasPrefix("£") ? compensation : "£\(compensation)")")
-                                .foregroundColor(.green)
-                        } else {
-                            Text("No Compensation")
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                DetailRow(label: "Outbound Date", value: localTicket.outboundDate)
+                DetailRow(label: "Outbound Time", value: localTicket.outboundTime)
+                if !localTicket.returnDate.isEmpty {
+                    DetailRow(label: "Return Date", value: localTicket.returnDate)
+                    DetailRow(label: "Return Time", value: localTicket.returnTime)
                 }
+            }
+        }
+    }
 
-                // Loyalty Programs Section
-                DetailSection(title: "Points/Loyalty Rewards", icon: "star") {
+    private func datePickersSection() -> some View {
+        VStack {
+            DatePicker("Outbound Date", selection: Binding(get: { dateFormatter.date(from: localTicket.outboundDate) ?? Date() }, set: { localTicket.outboundDate = dateFormatter.string(from: $0) }), displayedComponents: .date)
+            DatePicker("Outbound Time", selection: Binding(get: { timeFormatter.date(from: localTicket.outboundTime) ?? Date() }, set: { localTicket.outboundTime = timeFormatter.string(from: $0) }), displayedComponents: .hourAndMinute)
+            Toggle("Return Ticket", isOn: Binding(get: { !localTicket.returnDate.isEmpty }, set: { isOn in localTicket.returnDate = isOn ? dateFormatter.string(from: Date()) : "" }))
+            if !localTicket.returnDate.isEmpty {
+                DatePicker("Return Date", selection: Binding(get: { dateFormatter.date(from: localTicket.returnDate) ?? Date() }, set: { localTicket.returnDate = dateFormatter.string(from: $0) }), displayedComponents: .date)
+                DatePicker("Return Time", selection: Binding(get: { timeFormatter.date(from: localTicket.returnTime) ?? Date() }, set: { localTicket.returnTime = timeFormatter.string(from: $0) }), displayedComponents: .hourAndMinute)
+            }
+        }
+    }
+
+    private func compensationSection() -> some View {
+        FormSection(title: "Delay & Compensation Information", icon: "clock.arrow.circlepath") {
+            if isEditing {
+                Toggle("Was Delayed?", isOn: $localTicket.wasDelayed)
+                if localTicket.wasDelayed {
+                    EditableField(label: "Delay Duration", text: $localTicket.delayDuration)
+                }
+                Toggle("Pending Compensation", isOn: $localTicket.pendingCompensation)
+                if !localTicket.pendingCompensation {
+                    EditableField(label: "Compensation (£)", text: $localTicket.compensation)
+                }
+            } else {
+                DetailRow(label: "Was Delayed", value: localTicket.wasDelayed ? "Yes" : "No", color: localTicket.wasDelayed ? .red : .green)
+                if localTicket.wasDelayed {
+                    DetailRow(label: "Delayed by", value: "\(localTicket.delayDuration) minutes")
+                }
+                if localTicket.pendingCompensation {
+                    DetailRow(label: "Compensation", value: "Pending", color: .orange)
+                } else if !localTicket.compensation.isEmpty {
+                    DetailRow(label: "Compensation", value: "£\(localTicket.compensation)", color: .green)
+                }
+            }
+        }
+    }
+
+    private func loyaltyProgramsSection() -> some View {
+        if isEditing || hasLoyaltyPrograms() {
+            return AnyView(
+                FormSection(title: "Loyalty Programs", icon: "star") {
                     if isEditing {
                         Toggle("Virgin Train Ticket", isOn: $isVirginEnabled)
                         if isVirginEnabled {
@@ -100,112 +149,65 @@ struct TicketDetailView: View {
                             EditableField(label: "Club Avanti Journeys", text: $avantiJourneys)
                         }
                     } else {
-                        if !loyaltyProgram.isEmpty {
-                            let programs = loyaltyProgram.components(separatedBy: "; ")
-                            ForEach(programs, id: \.self) { program in
-                                Text(program)
-                                    .padding(.vertical, 4)
+                        if let program = localTicket.loyaltyProgram {
+                            if let points = program.virginPoints, points != "0" {
+                                DetailRow(label: "Virgin Points", value: points)
+                            }
+                            if let cash = program.lnerCashValue, cash != "0" {
+                                DetailRow(label: "LNER Cash Value", value: cash)
+                            }
+                            if let journeys = program.clubAvantiJourneys, journeys != "0" {
+                                DetailRow(label: "Club Avanti Journeys", value: journeys)
                             }
                         } else {
-                            Text("No Loyalty Programs Used")
-                                .foregroundColor(.secondary)
+                            Text("No Loyalty Programs").foregroundColor(.secondary)
                         }
                     }
                 }
-            }
-            .padding(.horizontal)
-        }
-        .background(Color(.systemGroupedBackground).edgesIgnoringSafeArea(.all))
-        .navigationTitle(isEditing ? "Edit Ticket" : "Ticket Details")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(isEditing ? "Save" : "Edit") {
-                    if isEditing {
-                        saveChanges()
-                    }
-                    isEditing.toggle()
-                }
-            }
-        }
-        .onAppear {
-            parseLoyaltyPrograms()
+            )
+        } else {
+            return AnyView(EmptyView())
         }
     }
-
+    
     private func saveChanges() {
-        // Combine loyalty programs into a single string
-        var programs: [String] = []
-        if isVirginEnabled {
-            programs.append("Virgin Train Ticket: \(virginPoints) Points")
-        }
-        if isLNEREEnabled {
-            programs.append("LNER Perks: £\(lnerCashValue)")
-        }
-        if isClubAvantiEnabled {
-            programs.append("Club Avanti: \(avantiJourneys) Journeys")
-        }
-        loyaltyProgram = programs.joined(separator: "; ")
-
-        let updatedTicket = TicketRecord(
-            origin: origin,
-            destination: destination,
-            price: price,
-            ticketType: ticketType,
-            outboundDate: outboundDate,
-            returnDate: returnDate,
-            wasDelayed: wasDelayed,
-            delayDuration: delayDuration,
-            compensation: compensation,
-            loyaltyProgram: loyaltyProgram
+        localTicket.loyaltyProgram = LoyaltyProgram(
+            virginPoints: isVirginEnabled ? virginPoints : nil,
+            lnerCashValue: isLNEREEnabled ? lnerCashValue : nil,
+            clubAvantiJourneys: isClubAvantiEnabled ? avantiJourneys : nil
         )
-        onSave(updatedTicket)
+        ticket = localTicket
+        onUpdate(localTicket)
     }
 
     private func parseLoyaltyPrograms() {
-        // Parse the loyalty program string into individual fields
-        let programs = loyaltyProgram.components(separatedBy: "; ")
-        isVirginEnabled = programs.contains { $0.contains("Virgin Train Ticket") }
-        virginPoints = programs.first(where: { $0.contains("Virgin Train Ticket") })?.components(separatedBy: ": ").last?.replacingOccurrences(of: " Points", with: "") ?? ""
+        if let program = localTicket.loyaltyProgram {
+            isVirginEnabled = program.virginPoints != nil && program.virginPoints != "0"
+            virginPoints = program.virginPoints ?? "0"
 
-        isLNEREEnabled = programs.contains { $0.contains("LNER Perks") }
-        lnerCashValue = programs.first(where: { $0.contains("LNER Perks") })?.components(separatedBy: ": ").last?.replacingOccurrences(of: "£", with: "") ?? ""
+            isLNEREEnabled = program.lnerCashValue != nil && program.lnerCashValue != "0"
+            lnerCashValue = program.lnerCashValue ?? "0"
 
-        isClubAvantiEnabled = programs.contains { $0.contains("Club Avanti") }
-        avantiJourneys = programs.first(where: { $0.contains("Club Avanti") })?.components(separatedBy: ": ").last?.replacingOccurrences(of: " Journeys", with: "") ?? ""
-    }
-}
-
-struct DetailSection<Content: View>: View {
-    let title: String
-    let icon: String
-    let content: Content
-
-    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.icon = icon
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-            }
-            .padding(.bottom, 5)
-
-            VStack(alignment: .leading, spacing: 8) {
-                content
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2))
+            isClubAvantiEnabled = program.clubAvantiJourneys != nil && program.clubAvantiJourneys != "0"
+            avantiJourneys = program.clubAvantiJourneys ?? "0"
         }
+    }
+
+    private func hasLoyaltyPrograms() -> Bool {
+        guard let program = localTicket.loyaltyProgram else { return false }
+        return program.virginPoints != nil || program.lnerCashValue != nil || program.clubAvantiJourneys != nil
+    }
+
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        return formatter
+    }
+
+    private var timeFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
     }
 }
 
@@ -220,9 +222,13 @@ struct EditableField: View {
                 .foregroundColor(.gray)
             TextField(label, text: $text)
                 .padding(10)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.gray.opacity(0.1)))
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gray.opacity(0.1))
+                )
                 .font(.body)
         }
+        .padding(.vertical, 5)
     }
 }
 

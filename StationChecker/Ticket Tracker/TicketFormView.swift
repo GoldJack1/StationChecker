@@ -10,8 +10,10 @@ struct TicketFormView: View {
     @State private var classType: String = "Standard"
     @State private var toc: String = ""
     @State private var outboundDate: Date = Date()
+    @State private var outboundTime: Date = Date()
     @State private var hasReturnTicket: Bool = false
     @State private var returnDate: Date = Date()
+    @State private var returnTime: Date = Date()
     @State private var wasDelayed: Bool = false
     @State private var delayDuration: String = "15-29"
     @State private var pendingCompensation: Bool = false
@@ -55,11 +57,17 @@ struct TicketFormView: View {
                         DatePicker("Outbound Date", selection: $outboundDate, displayedComponents: .date)
                             .padding(.vertical)
 
+                        DatePicker("Outbound Time", selection: $outboundTime, displayedComponents: .hourAndMinute)
+                            .padding(.vertical)
+
                         Toggle("Return Ticket", isOn: $hasReturnTicket)
                             .padding(.vertical)
 
+                        // Conditionally show return date and time fields
                         if hasReturnTicket {
                             DatePicker("Return Date", selection: $returnDate, displayedComponents: .date)
+                                .padding(.vertical)
+                            DatePicker("Return Time", selection: $returnTime, displayedComponents: .hourAndMinute)
                                 .padding(.vertical)
                         }
                     }
@@ -140,62 +148,46 @@ struct TicketFormView: View {
         }
     }
 
-    private func saveTicket() {
-        // Save logic remains unchanged
+    func saveTicket() {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        let formattedOutboundDate = dateFormatter.string(from: outboundDate)
+        let formattedOutboundTime = formatTime(outboundTime)
+        let formattedReturnDate = hasReturnTicket ? dateFormatter.string(from: returnDate) : ""
+        let formattedReturnTime = hasReturnTicket ? formatTime(returnTime) : ""
+
+        let loyaltyProgram = LoyaltyProgram(
+            virginPoints: isVirginEnabled ? virginPoints : nil,
+            lnerCashValue: isLNEREEnabled ? lnerCashValue : nil,
+            clubAvantiJourneys: isClubAvantiEnabled ? clubAvantiJourneys : nil
+        )
+
+        // Use empty strings if the return date/time is not applicable
+        let newTicket = TicketRecord(
+            origin: origin,
+            destination: destination,
+            price: price.hasPrefix("£") ? price : "£\(price)",
+            ticketType: ticketType,
+            classType: classType,
+            toc: toc.isEmpty ? nil : toc,
+            outboundDate: formattedOutboundDate,
+            outboundTime: formattedOutboundTime,
+            returnDate: formattedReturnDate,
+            returnTime: formattedReturnTime,
+            wasDelayed: wasDelayed,
+            delayDuration: wasDelayed ? delayDuration : "",
+            pendingCompensation: pendingCompensation, // Ensure this is passed correctly
+            compensation: pendingCompensation ? "" : compensation, // Clear compensation if pending is true
+            loyaltyProgram: loyaltyProgram
+        )
+
+        onSave(newTicket)
+        dismiss()
     }
-}
 
-struct FormSection<Content: View>: View {
-    let title: String
-    let icon: String
-    let content: Content
-
-    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.icon = icon
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.blue)
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-            }
-            .padding(.bottom, 5)
-
-            VStack(alignment: .leading, spacing: 8) {
-                content
-            }
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2))
-        }
-        .padding(.horizontal)
-    }
-}
-
-struct FormField: View {
-    let label: String
-    @Binding var text: String
-    let icon: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(.gray)
-                Text(label)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-            }
-            TextField(label, text: $text)
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.gray.opacity(0.1)))
-        }
+    private func formatTime(_ time: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: time)
     }
 }

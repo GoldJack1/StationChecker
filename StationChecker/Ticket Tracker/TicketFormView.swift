@@ -33,13 +33,14 @@ struct TicketFormView: View {
         "East Midlands Railway",
         "Great Western Railway",
         "LNER",
+        "Multi-Operator",
         "Northern",
         "ScotRail",
         "Southern",
-        "Thameslink",
+        "Thameslink/Great Northern",
         "TransPennine Express",
-        "West Midlands Trains",
-        "Transport For Wales"
+        "Transport For Wales",
+        "West Midlands Trains"
     ]
 
     @State private var showDropdown = false

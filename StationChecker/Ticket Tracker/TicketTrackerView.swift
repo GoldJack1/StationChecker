@@ -159,6 +159,9 @@ struct TicketTrackerView: View {
             ticket: $filteredTickets[index],
             onUpdate: { updatedTicket in
                 updateTicket(updatedTicket)
+            },
+            onDelete: {
+                deleteTicket(at: index)
             }
         )) {
             TicketCard(ticket: filteredTickets[index])
@@ -209,8 +212,8 @@ struct TicketTrackerView: View {
         }
     }
 
-    func deleteTickets(at offsets: IndexSet) {
-        tickets.remove(atOffsets: offsets)
+    func deleteTicket(at index: Int) {
+        tickets.removeAll { $0.id == filteredTickets[index].id }
         saveTicketsToDisk()
         filterAndSortTickets()
     }

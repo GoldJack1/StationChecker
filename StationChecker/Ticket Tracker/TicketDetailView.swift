@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct TicketDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @Binding var ticket: TicketRecord
     var onUpdate: (TicketRecord) -> Void
+    var onDelete: () -> Void // Add a closure for delete functionality
 
     @State private var isEditing: Bool = false
     @State private var localTicket: TicketRecord
@@ -14,9 +16,37 @@ struct TicketDetailView: View {
     @State private var isClubAvantiEnabled: Bool = false
     @State private var avantiJourneys: String = ""
 
-    init(ticket: Binding<TicketRecord>, onUpdate: @escaping (TicketRecord) -> Void) {
+    @State private var showTocDropdown = false
+    @State private var selectedTocIndex = 0
+
+    @State private var showDelayDropdown = false
+    @State private var delayDurationIndex = 0
+    
+    @State private var showDeleteConfirmation: Bool = false
+
+    private let tocOptions = [
+        "Avanti West Coast",
+        "CrossCountry",
+        "East Midlands Railway",
+        "Great Western Railway",
+        "LNER",
+        "Multi-Operator",
+        "Northern",
+        "ScotRail",
+        "Southern",
+        "Thameslink/Great Northern",
+        "TransPennine Express",
+        "Transport For Wales",
+        "West Midlands Trains"
+    ]
+
+    private let delayOptions = ["15-29", "30-59", "60-120", "Cancelled"]
+
+
+    init(ticket: Binding<TicketRecord>, onUpdate: @escaping (TicketRecord) -> Void, onDelete: @escaping () -> Void) {
         self._ticket = ticket
         self.onUpdate = onUpdate
+        self.onDelete = onDelete
         self._localTicket = State(initialValue: ticket.wrappedValue)
     }
 
@@ -27,6 +57,7 @@ struct TicketDetailView: View {
                 ticketDetailsSection()
                 compensationSection()
                 loyaltyProgramsSection()
+                deleteButtonSection()
             }
             .padding(.horizontal)
         }
@@ -62,18 +93,64 @@ struct TicketDetailView: View {
             if isEditing {
                 EditableField(label: "Price (£)", text: $localTicket.price)
                 EditableField(label: "Ticket Type", text: $localTicket.ticketType)
+
                 Picker("Class", selection: $localTicket.classType) {
                     Text("Standard").tag("Standard")
                     Text("First").tag("First")
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                EditableField(
-                    label: "TOC (Optional)",
-                    text: Binding(
-                        get: { localTicket.toc ?? "" },
-                        set: { localTicket.toc = $0.isEmpty ? nil : $0 }
-                    )
-                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Train Operator")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+
+                    Button(action: {
+                        withAnimation { showTocDropdown.toggle() }
+                    }) {
+                        HStack {
+                            Text(tocOptions[selectedTocIndex])
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                        }
+                        .padding()
+                        .background(Color(.systemGray5))
+                        .cornerRadius(6)
+                    }
+
+                    if showTocDropdown {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(tocOptions.indices, id: \.self) { index in
+                                    Button(action: {
+                                        withAnimation {
+                                            selectedTocIndex = index
+                                            showTocDropdown = false
+                                        }
+                                    }) {
+                                        HStack {
+                                            Text(tocOptions[index])
+                                            Spacer()
+                                            if selectedTocIndex == index {
+                                                Image(systemName: "checkmark")
+                                                    .foregroundColor(.blue)
+                                            }
+                                        }
+                                        .padding()
+                                        .background(Color(.systemGray6))
+                                    }
+                                }
+                            }
+                        }
+                        .frame(height: min(CGFloat(tocOptions.count), 5) * 44)
+                        .background(Color(.systemGray5))
+                        .cornerRadius(6)
+                        .shadow(radius: 5)
+                        .padding(.top, 8)
+                    }
+                }
+
                 datePickersSection()
             } else {
                 DetailRow(label: "Price", value: localTicket.price)
@@ -104,13 +181,92 @@ struct TicketDetailView: View {
         }
     }
 
+    private func deleteButtonSection() -> some View {
+        VStack {
+            Button(action: {
+                showDeleteConfirmation = true
+            }) {
+                HStack {
+                    Image(systemName: "trash")
+                        .foregroundColor(.white)
+                    Text("Delete Ticket")
+                        .foregroundColor(.white)
+                        .bold()
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.red)
+                .cornerRadius(10)
+            }
+            .padding(.top, 20)
+            .confirmationDialog("Are you sure you want to delete this ticket?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive, action: {
+                    onDelete() // Call the onDelete closure
+                    dismiss()  // Automatically navigate back to the parent view
+                })
+                Button("Cancel", role: .cancel, action: {})
+            }
+        }
+    }
+    
     private func compensationSection() -> some View {
         FormSection(title: "Delay & Compensation Information", icon: "clock.arrow.circlepath") {
             if isEditing {
                 Toggle("Was Delayed?", isOn: $localTicket.wasDelayed)
+
                 if localTicket.wasDelayed {
-                    EditableField(label: "Delay Duration", text: $localTicket.delayDuration)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Delay Duration")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+
+                        Button(action: {
+                            withAnimation { showDelayDropdown.toggle() }
+                        }) {
+                            HStack {
+                                Text(delayOptions[delayDurationIndex])
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                            }
+                            .padding()
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
+                        }
+
+                        if showDelayDropdown {
+                            ScrollView {
+                                VStack(spacing: 0) {
+                                    ForEach(delayOptions.indices, id: \.self) { index in
+                                        Button(action: {
+                                            withAnimation {
+                                                delayDurationIndex = index
+                                                showDelayDropdown = false
+                                            }
+                                        }) {
+                                            HStack {
+                                                Text(delayOptions[index])
+                                                Spacer()
+                                                if delayDurationIndex == index {
+                                                    Image(systemName: "checkmark")
+                                                        .foregroundColor(.blue)
+                                                }
+                                            }
+                                            .padding()
+                                            .background(Color(.systemGray6))
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(height: min(CGFloat(delayOptions.count), 5) * 44)
+                            .background(Color(.systemGray5))
+                            .cornerRadius(6)
+                            .shadow(radius: 5)
+                            .padding(.top, 8)
+                        }
+                    }
                 }
+
                 Toggle("Pending Compensation", isOn: $localTicket.pendingCompensation)
                 if !localTicket.pendingCompensation {
                     EditableField(label: "Compensation (£)", text: $localTicket.compensation)
@@ -118,7 +274,7 @@ struct TicketDetailView: View {
             } else {
                 DetailRow(label: "Was Delayed", value: localTicket.wasDelayed ? "Yes" : "No", color: localTicket.wasDelayed ? .red : .green)
                 if localTicket.wasDelayed {
-                    DetailRow(label: "Delayed by", value: "\(localTicket.delayDuration) minutes")
+                    DetailRow(label: "Delayed by", value: "\(delayOptions[delayDurationIndex]) minutes")
                 }
                 if localTicket.pendingCompensation {
                     DetailRow(label: "Compensation", value: "Pending", color: .orange)
@@ -159,8 +315,6 @@ struct TicketDetailView: View {
                             if let journeys = program.clubAvantiJourneys, journeys != "0" {
                                 DetailRow(label: "Club Avanti Journeys", value: journeys)
                             }
-                        } else {
-                            Text("No Loyalty Programs").foregroundColor(.secondary)
                         }
                     }
                 }
@@ -170,12 +324,26 @@ struct TicketDetailView: View {
         }
     }
     
+    private func hasLoyaltyPrograms() -> Bool {
+        guard let program = localTicket.loyaltyProgram else { return false }
+        return (program.virginPoints != nil && program.virginPoints != "0") ||
+               (program.lnerCashValue != nil && program.lnerCashValue != "0") ||
+               (program.clubAvantiJourneys != nil && program.clubAvantiJourneys != "0")
+    }
+
     private func saveChanges() {
+        // Update the TOC and Delay Duration based on the selected indices
+        localTicket.toc = tocOptions[selectedTocIndex]
+        localTicket.delayDuration = delayOptions[delayDurationIndex]
+
+        // Save loyalty program details
         localTicket.loyaltyProgram = LoyaltyProgram(
             virginPoints: isVirginEnabled ? virginPoints : nil,
             lnerCashValue: isLNEREEnabled ? lnerCashValue : nil,
             clubAvantiJourneys: isClubAvantiEnabled ? avantiJourneys : nil
         )
+
+        // Update the ticket binding and call the onUpdate closure
         ticket = localTicket
         onUpdate(localTicket)
     }
@@ -193,11 +361,6 @@ struct TicketDetailView: View {
         }
     }
 
-    private func hasLoyaltyPrograms() -> Bool {
-        guard let program = localTicket.loyaltyProgram else { return false }
-        return program.virginPoints != nil || program.lnerCashValue != nil || program.clubAvantiJourneys != nil
-    }
-
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
@@ -208,45 +371,5 @@ struct TicketDetailView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter
-    }
-}
-
-struct EditableField: View {
-    let label: String
-    @Binding var text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            TextField(label, text: $text)
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.gray.opacity(0.1))
-                )
-                .font(.body)
-        }
-        .padding(.vertical, 5)
-    }
-}
-
-struct DetailRow: View {
-    let label: String
-    let value: String
-    var color: Color = .primary
-
-    var body: some View {
-        HStack {
-            Text(label + ":")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            Spacer()
-            Text(value)
-                .font(.body)
-                .foregroundColor(color)
-        }
-        .padding(.vertical, 4)
     }
 }

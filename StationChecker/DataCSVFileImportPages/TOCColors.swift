@@ -17,10 +17,10 @@ let tocColors: [String: String] = [
     "Thameslink/Great Northern": "#ff5aa4",
     "Heathrow Express": "#532e63",
     "Island Line": "#1e90ff",
-    "TFW": "#ff0000",
+    "Transport For Wales": "#ff0000",
     "LNER": "#ce0e2d",
     "Northern": "#034DE2",
-    "TPE": "#09a4ec",
+    "TransPennine Express": "#09a4ec",
     "Merseyrail": "#fff200",
     // Add more TOCs and their colors as needed
 ]

@@ -15,7 +15,7 @@ struct TicketFormView: View {
     @State private var returnDate: Date = Date()
     @State private var returnTime: Date = Date()
     @State private var wasDelayed: Bool = false
-    @State private var delayDuration: String = "15-29"
+    @State private var delayDurationIndex: Int = 0
     @State private var pendingCompensation: Bool = false
     @State private var compensation: String = ""
     @State private var isVirginEnabled: Bool = false
@@ -25,7 +25,26 @@ struct TicketFormView: View {
     @State private var isClubAvantiEnabled: Bool = false
     @State private var clubAvantiJourneys: String = ""
 
-    let delayOptions = ["15-29", "30-59", "60-120", "Cancelled"]
+    private let delayOptions = ["15-29", "30-59", "60-120", "Cancelled"]
+
+    private let tocOptions = [
+        "Avanti West Coast",
+        "CrossCountry",
+        "East Midlands Railway",
+        "Great Western Railway",
+        "LNER",
+        "Northern",
+        "ScotRail",
+        "Southern",
+        "Thameslink",
+        "TransPennine Express",
+        "West Midlands Trains",
+        "Transport For Wales"
+    ]
+
+    @State private var showDropdown = false
+    @State private var selectedTocIndex: Int = 0
+    @State private var showDelayDropdown = false
 
     var onSave: (TicketRecord) -> Void
 
@@ -52,8 +71,62 @@ struct TicketFormView: View {
                         .pickerStyle(SegmentedPickerStyle())
                         .padding(.vertical)
 
-                        FormField(label: "TOC (Optional)", text: $toc, icon: "building.2")
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Train Operator")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
 
+                            Button(action: {
+                                withAnimation {
+                                    showDropdown.toggle()
+                                }
+                            }) {
+                                HStack {
+                                    Text(tocOptions[selectedTocIndex])
+                                        .foregroundColor(tocOptions[selectedTocIndex].isEmpty ? .secondary : .primary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                }
+                                .padding()
+                                .background(Color(.systemGray5))
+                                .cornerRadius(6)
+                            }
+
+                            if showDropdown {
+                                ScrollView {
+                                    VStack(spacing: 0) {
+                                        ForEach(tocOptions.indices, id: \ .self) { index in
+                                            Button(action: {
+                                                withAnimation {
+                                                    selectedTocIndex = index
+                                                    showDropdown = false
+                                                }
+                                            }) {
+                                                HStack {
+                                                    Text(tocOptions[index])
+                                                    Spacer()
+                                                    if selectedTocIndex == index {
+                                                        Image(systemName: "checkmark")
+                                                            .foregroundColor(.blue)
+                                                    }
+                                                }
+                                                .padding()
+                                                .background(Color(.systemGray6))
+                                            }
+                                        }
+                                    }
+                                }
+                                .frame(height: min(CGFloat(tocOptions.count), 5) * 44) // Display first 5 options
+                                .background(Color(.systemGray5))
+                                .cornerRadius(6)
+                                .shadow(radius: 5)
+                                .padding(.top, 8) // Ensure dropdown appears below the button
+                            }
+                        }
+                    }
+
+                    // Outbound and Return Date Section
+                    FormSection(title: "Travel Dates", icon: "calendar") {
                         DatePicker("Outbound Date", selection: $outboundDate, displayedComponents: .date)
                             .padding(.vertical)
 
@@ -63,7 +136,6 @@ struct TicketFormView: View {
                         Toggle("Return Ticket", isOn: $hasReturnTicket)
                             .padding(.vertical)
 
-                        // Conditionally show return date and time fields
                         if hasReturnTicket {
                             DatePicker("Return Date", selection: $returnDate, displayedComponents: .date)
                                 .padding(.vertical)
@@ -78,12 +150,58 @@ struct TicketFormView: View {
                             .padding(.vertical)
 
                         if wasDelayed {
-                            Picker("Delay Duration", selection: $delayDuration) {
-                                ForEach(delayOptions, id: \.self) { option in
-                                    Text(option)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Delay Duration")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+
+                                Button(action: {
+                                    withAnimation {
+                                        showDelayDropdown.toggle()
+                                    }
+                                }) {
+                                    HStack {
+                                        Text(delayOptions[delayDurationIndex])
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.down")
+                                    }
+                                    .padding()
+                                    .background(Color(.systemGray5))
+                                    .cornerRadius(6)
+                                }
+
+                                if showDelayDropdown {
+                                    ScrollView {
+                                        VStack(spacing: 0) {
+                                            ForEach(delayOptions.indices, id: \ .self) { index in
+                                                Button(action: {
+                                                    withAnimation {
+                                                        delayDurationIndex = index
+                                                        showDelayDropdown = false
+                                                    }
+                                                }) {
+                                                    HStack {
+                                                        Text(delayOptions[index])
+                                                        Spacer()
+                                                        if delayDurationIndex == index {
+                                                            Image(systemName: "checkmark")
+                                                                .foregroundColor(.blue)
+                                                        }
+                                                    }
+                                                    .padding()
+                                                    .background(Color(.systemGray6))
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .frame(height: min(CGFloat(delayOptions.count), 5) * 44) // Display first 5 options
+                                    .background(Color(.systemGray5))
+                                    .cornerRadius(6)
+                                    .shadow(radius: 5)
+                                    .padding(.top, 8) // Ensure dropdown appears below the button
                                 }
                             }
-                            .pickerStyle(MenuPickerStyle())
                         }
                     }
 
@@ -162,22 +280,21 @@ struct TicketFormView: View {
             clubAvantiJourneys: isClubAvantiEnabled ? clubAvantiJourneys : nil
         )
 
-        // Use empty strings if the return date/time is not applicable
         let newTicket = TicketRecord(
             origin: origin,
             destination: destination,
             price: price.hasPrefix("£") ? price : "£\(price)",
             ticketType: ticketType,
             classType: classType,
-            toc: toc.isEmpty ? nil : toc,
+            toc: tocOptions[selectedTocIndex],
             outboundDate: formattedOutboundDate,
             outboundTime: formattedOutboundTime,
             returnDate: formattedReturnDate,
             returnTime: formattedReturnTime,
             wasDelayed: wasDelayed,
-            delayDuration: wasDelayed ? delayDuration : "",
-            pendingCompensation: pendingCompensation, // Ensure this is passed correctly
-            compensation: pendingCompensation ? "" : compensation, // Clear compensation if pending is true
+            delayDuration: wasDelayed ? delayOptions[delayDurationIndex] : "",
+            pendingCompensation: pendingCompensation,
+            compensation: pendingCompensation ? "" : compensation,
             loyaltyProgram: loyaltyProgram
         )
 

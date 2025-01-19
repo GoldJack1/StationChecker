@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TicketFormView: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\ .dismiss) private var dismiss
 
     @State private var origin: String = ""
     @State private var destination: String = ""
@@ -14,6 +14,7 @@ struct TicketFormView: View {
     @State private var hasReturnTicket: Bool = false
     @State private var returnDate: Date = Date()
     @State private var returnTime: Date = Date()
+
     @State private var wasDelayed: Bool = false
     @State private var delayDurationIndex: Int = 0
     @State private var pendingCompensation: Bool = false
@@ -25,8 +26,14 @@ struct TicketFormView: View {
     @State private var isClubAvantiEnabled: Bool = false
     @State private var clubAvantiJourneys: String = ""
 
-    private let delayOptions = ["15-29", "30-59", "60-120", "Cancelled"]
+    @State private var showDropdown: Bool = false
+    @State private var selectedTocIndex: Int = 0
+    @State private var showDelayDropdown: Bool = false
+    @State private var filteredStations: [Station] = []
+    @State private var originSearchActive: Bool = false
+    @State private var destinationSearchActive: Bool = false
 
+    private let delayOptions = ["15-29", "30-59", "60-120", "Cancelled"]
     private let tocOptions = [
         "Avanti West Coast",
         "CrossCountry",
@@ -43,10 +50,6 @@ struct TicketFormView: View {
         "West Midlands Trains"
     ]
 
-    @State private var showDropdown = false
-    @State private var selectedTocIndex: Int = 0
-    @State private var showDelayDropdown = false
-
     var onSave: (TicketRecord) -> Void
 
     var body: some View {
@@ -55,8 +58,79 @@ struct TicketFormView: View {
                 VStack(spacing: 20) {
                     // Journey Details Section
                     FormSection(title: "Journey Details", icon: "train.side.front.car") {
-                        FormField(label: "Origin", text: $origin, icon: "map")
-                        FormField(label: "Destination", text: $destination, icon: "map")
+                        // Origin Field with Search Functionality
+                        VStack(alignment: .leading) {
+                            Text("Origin")
+                                .font(.headline)
+
+                            TextField("Enter station name or CRS code", text: $origin)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                                .onChange(of: origin) {
+                                    handleOriginChange(origin)
+                                }
+
+                            if originSearchActive && !filteredStations.isEmpty {
+                                ScrollView {
+                                    VStack(spacing: 0) {
+                                        ForEach(filteredStations, id: \ .crsCode) { station in
+                                            Text("\(station.stationName) (\(station.crsCode))")
+                                                .padding()
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .background(Color(.secondarySystemBackground))
+                                                .cornerRadius(6)
+                                                .onTapGesture {
+                                                    origin = "\(station.stationName) (\(station.crsCode))"
+                                                    filteredStations = []
+                                                    originSearchActive = false
+                                                }
+                                        }
+                                    }
+                                }
+                                .frame(maxHeight: 220)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(8)
+                                .shadow(radius: 5)
+                            }
+                        }
+
+                        // Destination Field with Search Functionality
+                        VStack(alignment: .leading) {
+                            Text("Destination")
+                                .font(.headline)
+
+                            TextField("Enter station name or CRS code", text: $destination)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                                .onChange(of: destination) {
+                                    handleDestinationChange(destination)
+                                }
+
+                            if destinationSearchActive && !filteredStations.isEmpty {
+                                ScrollView {
+                                    VStack(spacing: 0) {
+                                        ForEach(filteredStations, id: \ .crsCode) { station in
+                                            Text("\(station.stationName) (\(station.crsCode))")
+                                                .padding()
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .background(Color(.secondarySystemBackground))
+                                                .cornerRadius(6)
+                                                .onTapGesture {
+                                                    destination = "\(station.stationName) (\(station.crsCode))"
+                                                    filteredStations = []
+                                                    destinationSearchActive = false
+                                                }
+                                        }
+                                    }
+                                }
+                                .frame(maxHeight: 220)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(8)
+                                .shadow(radius: 5)
+                            }
+                        }
                     }
 
                     // Ticket Details Section
@@ -100,6 +174,7 @@ struct TicketFormView: View {
                                             Button(action: {
                                                 withAnimation {
                                                     selectedTocIndex = index
+                                                    toc = tocOptions[index] // Ensure TOC is saved
                                                     showDropdown = false
                                                 }
                                             }) {
@@ -117,11 +192,11 @@ struct TicketFormView: View {
                                         }
                                     }
                                 }
-                                .frame(height: min(CGFloat(tocOptions.count), 5) * 44) // Display first 5 options
+                                .frame(height: min(CGFloat(tocOptions.count), 5) * 44)
                                 .background(Color(.systemGray5))
                                 .cornerRadius(6)
                                 .shadow(radius: 5)
-                                .padding(.top, 8) // Ensure dropdown appears below the button
+                                .padding(.top, 8)
                             }
                         }
                     }
@@ -196,11 +271,11 @@ struct TicketFormView: View {
                                             }
                                         }
                                     }
-                                    .frame(height: min(CGFloat(delayOptions.count), 5) * 44) // Display first 5 options
+                                    .frame(height: min(CGFloat(delayOptions.count), 5) * 44)
                                     .background(Color(.systemGray5))
                                     .cornerRadius(6)
                                     .shadow(radius: 5)
-                                    .padding(.top, 8) // Ensure dropdown appears below the button
+                                    .padding(.top, 8)
                                 }
                             }
                         }
@@ -267,19 +342,18 @@ struct TicketFormView: View {
         }
     }
 
-    func saveTicket() {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        let formattedOutboundDate = dateFormatter.string(from: outboundDate)
-        let formattedOutboundTime = formatTime(outboundTime)
-        let formattedReturnDate = hasReturnTicket ? dateFormatter.string(from: returnDate) : ""
-        let formattedReturnTime = hasReturnTicket ? formatTime(returnTime) : ""
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        return formatter.string(from: date)
+    }
 
-        let loyaltyProgram = LoyaltyProgram(
-            virginPoints: isVirginEnabled ? virginPoints : nil,
-            lnerCashValue: isLNEREEnabled ? lnerCashValue : nil,
-            clubAvantiJourneys: isClubAvantiEnabled ? clubAvantiJourneys : nil
-        )
+    private func saveTicket() {
+        let formattedOutboundDate = formatDate(outboundDate)
+        let formattedOutboundTime = DateFormatter.localizedString(from: outboundTime, dateStyle: .none, timeStyle: .short)
+        let formattedReturnDate = hasReturnTicket ? formatDate(returnDate) : ""
+        let formattedReturnTime = hasReturnTicket ? DateFormatter.localizedString(from: returnTime, dateStyle: .none, timeStyle: .short) : ""
 
         let newTicket = TicketRecord(
             origin: origin,
@@ -287,7 +361,7 @@ struct TicketFormView: View {
             price: price.hasPrefix("£") ? price : "£\(price)",
             ticketType: ticketType,
             classType: classType,
-            toc: tocOptions[selectedTocIndex],
+            toc: toc,
             outboundDate: formattedOutboundDate,
             outboundTime: formattedOutboundTime,
             returnDate: formattedReturnDate,
@@ -296,16 +370,44 @@ struct TicketFormView: View {
             delayDuration: wasDelayed ? delayOptions[delayDurationIndex] : "",
             pendingCompensation: pendingCompensation,
             compensation: pendingCompensation ? "" : compensation,
-            loyaltyProgram: loyaltyProgram
+            loyaltyProgram: LoyaltyProgram(
+                virginPoints: isVirginEnabled ? virginPoints : nil,
+                lnerCashValue: isLNEREEnabled ? lnerCashValue : nil,
+                clubAvantiJourneys: isClubAvantiEnabled ? clubAvantiJourneys : nil
+            )
         )
 
         onSave(newTicket)
         dismiss()
     }
 
-    private func formatTime(_ time: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: time)
+    private func handleOriginChange(_ newValue: String) {
+        originSearchActive = true
+        destinationSearchActive = false // Ensure destination dropdown is hidden
+        let lowercasedInput = newValue.lowercased()
+
+        // Filter stations and prioritize CRS code matches
+        filteredStations = stations.filter { station in
+            station.crsCode.lowercased() == lowercasedInput ||
+            station.stationName.lowercased().contains(lowercasedInput) ||
+            station.crsCode.lowercased().contains(lowercasedInput)
+        }.sorted { station1, station2 in
+            station1.crsCode.lowercased() == lowercasedInput && station2.crsCode.lowercased() != lowercasedInput
+        }
+    }
+
+    private func handleDestinationChange(_ newValue: String) {
+        destinationSearchActive = true
+        originSearchActive = false // Ensure origin dropdown is hidden
+        let lowercasedInput = newValue.lowercased()
+
+        // Filter stations and prioritize CRS code matches
+        filteredStations = stations.filter { station in
+            station.crsCode.lowercased() == lowercasedInput ||
+            station.stationName.lowercased().contains(lowercasedInput) ||
+            station.crsCode.lowercased().contains(lowercasedInput)
+        }.sorted { station1, station2 in
+            station1.crsCode.lowercased() == lowercasedInput && station2.crsCode.lowercased() != lowercasedInput
+        }
     }
 }

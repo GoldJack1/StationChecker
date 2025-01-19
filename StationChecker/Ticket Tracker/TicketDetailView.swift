@@ -23,6 +23,9 @@ struct TicketDetailView: View {
     @State private var delayDurationIndex = 0
     
     @State private var showDeleteConfirmation: Bool = false
+    @State private var filteredStations: [Station] = []
+    @State private var originSearchActive: Bool = false
+    @State private var destinationSearchActive: Bool = false
 
     private let tocOptions = [
         "Avanti West Coast",
@@ -73,14 +76,88 @@ struct TicketDetailView: View {
         }
         .onAppear {
             parseLoyaltyPrograms()
+            if let toc = localTicket.toc, let index = tocOptions.firstIndex(of: toc) {
+                selectedTocIndex = index
+            } else {
+                selectedTocIndex = 0 // Default to the first TOC if none is set
+            }
         }
     }
 
     private func journeyDetailsSection() -> some View {
         FormSection(title: "Journey Details", icon: "train.side.front.car") {
             if isEditing {
-                EditableField(label: "Origin", text: $localTicket.origin)
-                EditableField(label: "Destination", text: $localTicket.destination)
+                VStack(alignment: .leading) {
+                    Text("Origin")
+                        .font(.headline)
+
+                    TextField("Enter station name or CRS code", text: $localTicket.origin)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        .onChange(of: localTicket.origin) { newValue in
+                            handleOriginChange(newValue)
+                        }
+
+                    if originSearchActive && !filteredStations.isEmpty {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(filteredStations, id: \.crsCode) { station in
+                                    Text("\(station.stationName) (\(station.crsCode))")
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(6)
+                                        .onTapGesture {
+                                            localTicket.origin = "\(station.stationName) (\(station.crsCode))"
+                                            filteredStations = []
+                                            originSearchActive = false
+                                        }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 220)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
+                        .shadow(radius: 5)
+                    }
+                }
+
+                VStack(alignment: .leading) {
+                    Text("Destination")
+                        .font(.headline)
+
+                    TextField("Enter station name or CRS code", text: $localTicket.destination)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
+                        .onChange(of: localTicket.destination) { newValue in
+                            handleDestinationChange(newValue)
+                        }
+
+                    if destinationSearchActive && !filteredStations.isEmpty {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(filteredStations, id: \.crsCode) { station in
+                                    Text("\(station.stationName) (\(station.crsCode))")
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color(.secondarySystemBackground))
+                                        .cornerRadius(6)
+                                        .onTapGesture {
+                                            localTicket.destination = "\(station.stationName) (\(station.crsCode))"
+                                            filteredStations = []
+                                            destinationSearchActive = false
+                                        }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 220)
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
+                        .shadow(radius: 5)
+                    }
+                }
             } else {
                 DetailRow(label: "Origin", value: localTicket.origin)
                 DetailRow(label: "Destination", value: localTicket.destination)
@@ -109,7 +186,7 @@ struct TicketDetailView: View {
                         withAnimation { showTocDropdown.toggle() }
                     }) {
                         HStack {
-                            Text(tocOptions[selectedTocIndex])
+                            Text(localTicket.toc ?? "Select an operator")
                                 .foregroundColor(.primary)
                             Spacer()
                             Image(systemName: "chevron.down")
@@ -125,6 +202,7 @@ struct TicketDetailView: View {
                                 ForEach(tocOptions.indices, id: \.self) { index in
                                     Button(action: {
                                         withAnimation {
+                                            localTicket.toc = tocOptions[index] // Update `localTicket.toc` directly
                                             selectedTocIndex = index
                                             showTocDropdown = false
                                         }
@@ -346,6 +424,36 @@ struct TicketDetailView: View {
         // Update the ticket binding and call the onUpdate closure
         ticket = localTicket
         onUpdate(localTicket)
+    }
+    
+    private func handleOriginChange(_ newValue: String) {
+        originSearchActive = true
+        destinationSearchActive = false // Ensure destination dropdown is hidden
+        let lowercasedInput = newValue.lowercased()
+
+        // Filter stations and prioritize CRS code matches
+        filteredStations = stations.filter { station in
+            station.crsCode.lowercased() == lowercasedInput ||
+            station.stationName.lowercased().contains(lowercasedInput) ||
+            station.crsCode.lowercased().contains(lowercasedInput)
+        }.sorted { station1, station2 in
+            station1.crsCode.lowercased() == lowercasedInput && station2.crsCode.lowercased() != lowercasedInput
+        }
+    }
+
+    private func handleDestinationChange(_ newValue: String) {
+        destinationSearchActive = true
+        originSearchActive = false // Ensure origin dropdown is hidden
+        let lowercasedInput = newValue.lowercased()
+
+        // Filter stations and prioritize CRS code matches
+        filteredStations = stations.filter { station in
+            station.crsCode.lowercased() == lowercasedInput ||
+            station.stationName.lowercased().contains(lowercasedInput) ||
+            station.crsCode.lowercased().contains(lowercasedInput)
+        }.sorted { station1, station2 in
+            station1.crsCode.lowercased() == lowercasedInput && station2.crsCode.lowercased() != lowercasedInput
+        }
     }
 
     private func parseLoyaltyPrograms() {
